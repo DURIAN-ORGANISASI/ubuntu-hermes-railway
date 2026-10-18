@@ -15,7 +15,10 @@ fi
 
 PORT="${PORT:-8080}"
 HERMES_HOME="${HERMES_HOME:-/opt/data}"
-export HERMES_HOME
+HERMES_RUNTIME_DIR="${HERMES_RUNTIME_DIR:-/usr/local/share/hermes-tools}"
+UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
+export HERMES_HOME HERMES_RUNTIME_DIR UV_CACHE_DIR
+mkdir -p "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}"
 mkdir -p /data "${HERMES_HOME}"
 cd /data
 
