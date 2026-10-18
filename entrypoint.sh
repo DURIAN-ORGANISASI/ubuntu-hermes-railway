@@ -20,6 +20,45 @@ UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 export HERMES_HOME HERMES_RUNTIME_DIR UV_CACHE_DIR
 mkdir -p "${HERMES_HOME}" "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}" /data
 
+# Keep large, re-downloadable Hermes tool payloads and partial downloads off
+# Railway's small persistent volume. Config, sessions, logs and memory stay in
+# HERMES_HOME; only the tool store and download cache are redirected.
+relocate_rebuildable_dir() {
+  local persistent="$1"
+  local runtime="$2"
+  mkdir -p "$(dirname "${persistent}")" "$(dirname "${runtime}")"
+
+  if [[ -L "${persistent}" ]]; then
+    if [[ "$(readlink "${persistent}")" == "${runtime}" ]]; then
+      mkdir -p "${runtime}"
+      return 0
+    fi
+    echo "ERROR: ${persistent} is a symlink to an unexpected location: $(readlink "${persistent}")" >&2
+    return 1
+  fi
+
+  if [[ -d "${persistent}" ]]; then
+    mkdir -p "${runtime}"
+    # Copy to the container filesystem first, then remove the volume copy.
+    # This works across Railway's separate volume/container filesystems.
+    cp -a "${persistent}/." "${runtime}/" || {
+      echo "ERROR: Could not migrate ${persistent} to ${runtime}; original data was kept." >&2
+      return 1
+    }
+    rm -rf "${persistent}"
+  elif [[ -e "${persistent}" ]]; then
+    echo "ERROR: ${persistent} exists but is not a directory." >&2
+    return 1
+  else
+    mkdir -p "${runtime}"
+  fi
+
+  ln -s "${runtime}" "${persistent}"
+}
+
+relocate_rebuildable_dir "${HERMES_HOME}/cache/partials" "${HERMES_RUNTIME_DIR}/cache/partials"
+relocate_rebuildable_dir "${HERMES_HOME}/tools" "${HERMES_RUNTIME_DIR}/tools"
+
 # Hermes PM's uv cache is hard-coded under HERMES_HOME/cache/uv in this
 # upstream build; UV_CACHE_DIR alone does not relocate it. Move this disposable
 # cache off Railway's small volume and link it to the container filesystem.
