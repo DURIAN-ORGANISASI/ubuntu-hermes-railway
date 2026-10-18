@@ -33,9 +33,9 @@ RUN set -eux; \
 
 # Install Hermes into the image at build time. HERMES_HOME is only for persistent
 # user config/state; HERMES_RUNTIME_DIR keeps managed tools off the small volume.
-RUN mkdir -p "${HERMES_RUNTIME_DIR}" "${HERMES_HOME}" \
+RUN mkdir -p "${HERMES_RUNTIME_DIR}" "${HERMES_HOME}" /usr/local/share/hermes-agent \
     && curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install-hermes.sh \
-    && env -u HERMES_HOME bash /tmp/install-hermes.sh --non-interactive --skip-browser \
+    && bash /tmp/install-hermes.sh --dir /usr/local/share/hermes-agent --hermes-home "${HERMES_HOME}" --non-interactive --skip-browser \
     && rm -f /tmp/install-hermes.sh \
     && command -v hermes
 
