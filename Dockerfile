@@ -35,7 +35,7 @@ RUN set -eux; \
 # user config/state; HERMES_RUNTIME_DIR keeps managed tools off the small volume.
 RUN mkdir -p "${HERMES_RUNTIME_DIR}" "${HERMES_HOME}" \
     && curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install-hermes.sh \
-    && bash /tmp/install-hermes.sh --non-interactive --skip-browser \
+    && env -u HERMES_HOME bash /tmp/install-hermes.sh --non-interactive --skip-browser \
     && rm -f /tmp/install-hermes.sh \
     && command -v hermes
 
