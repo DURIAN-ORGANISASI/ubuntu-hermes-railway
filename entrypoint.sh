@@ -18,8 +18,37 @@ HERMES_HOME="${HERMES_HOME:-/opt/data}"
 HERMES_RUNTIME_DIR="${HERMES_RUNTIME_DIR:-/usr/local/share/hermes-tools}"
 UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 export HERMES_HOME HERMES_RUNTIME_DIR UV_CACHE_DIR
-mkdir -p "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}"
-mkdir -p /data "${HERMES_HOME}"
+mkdir -p "${HERMES_HOME}" "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}" /data
+
+# Hermes PM stores its per-install runtime under HERMES_HOME/installs by default.
+# Railway's persistent /opt/data volume is small, so move that PM-only state to
+# the container filesystem and symlink it back. User config, sessions and memory
+# remain under HERMES_HOME; only reinstallable package-manager state is redirected.
+PM_STATE_DIR="${HERMES_HOME}/installs"
+PM_RUNTIME_STATE_DIR="${HERMES_RUNTIME_DIR}/installs"
+mkdir -p "${HERMES_RUNTIME_DIR}"
+if [[ -L "${PM_STATE_DIR}" ]]; then
+  mkdir -p "${PM_RUNTIME_STATE_DIR}"
+elif [[ -d "${PM_STATE_DIR}" ]]; then
+  if [[ -e "${PM_RUNTIME_STATE_DIR}" ]]; then
+    cp -a "${PM_STATE_DIR}/." "${PM_RUNTIME_STATE_DIR}/" || {
+      echo "ERROR: Could not migrate Hermes PM state out of ${PM_STATE_DIR}." >&2
+      exit 1
+    }
+    rm -rf "${PM_STATE_DIR}"
+  else
+    mv "${PM_STATE_DIR}" "${PM_RUNTIME_STATE_DIR}" || {
+      echo "ERROR: Could not move Hermes PM state out of ${PM_STATE_DIR}." >&2
+      exit 1
+    }
+  fi
+  ln -s "${PM_RUNTIME_STATE_DIR}" "${PM_STATE_DIR}"
+elif [[ -e "${PM_STATE_DIR}" ]]; then
+  echo "ERROR: ${PM_STATE_DIR} exists but is not a directory or symlink." >&2
+  exit 1
+else
+  ln -s "${PM_RUNTIME_STATE_DIR}" "${PM_STATE_DIR}"
+fi
 cd /data
 
 # Railway containers do not rely on systemd. Keep the Gateway in the container
