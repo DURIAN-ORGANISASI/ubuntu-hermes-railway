@@ -14,8 +14,10 @@ Deploy an Ubuntu 26.04 web terminal on Railway with Hermes Agent CLI installed, 
 - Optional automatic Gateway launch/restart when Hermes configuration exists
 - `Asia/Jakarta` timezone by default
 - Hermes data directory configurable with `HERMES_HOME` (defaults to `/opt/data`)
+- Hermes managed tool runtime uses `HERMES_RUNTIME_DIR` (defaults to `/usr/local/share/hermes-tools`), separate from the small persistent volume
+- uv download/cache files go to `/tmp/uv-cache` by default, not `/opt/data`
 
-The image install uses `--skip-browser` to keep the default image lighter. This does not configure a model or messaging platform for you; those are set up interactively in the terminal. Browser automation can be added later if needed.
+The image install uses `--skip-browser` to keep the default image lighter. Hermes runtime tools are directed to `/usr/local/share/hermes-tools`, outside the `/opt/data` volume, so Python/Node/FFmpeg managed tools do not consume the small persistent volume. The runtime directory lives in the container filesystem and may be recreated on deploy; set it during image build or keep it outside `/opt/data`. This does not configure a model or messaging platform for you; those are set up interactively in the terminal. Browser automation can be added later if needed.
 
 ## Railway Variables
 
@@ -26,7 +28,9 @@ Set these under **Railway → Service → Variables**:
 | `TERMINAL_USER` | Yes | Terminal login username; must not contain `:` |
 | `TERMINAL_PASSWORD` | Yes | Unique random password, minimum 16 characters; 24–40 recommended |
 | `TZ` | No | Defaults to `Asia/Jakarta` |
-| `HERMES_HOME` | No | Defaults to `/opt/data` |
+| `HERMES_HOME` | No | Defaults to `/opt/data`; persistent config/state only |
+| `HERMES_RUNTIME_DIR` | No | Defaults to `/usr/local/share/hermes-tools`; keep managed Python/Node/FFmpeg tools outside the 500 MB volume |
+| `UV_CACHE_DIR` | No | Defaults to `/tmp/uv-cache`; temporary download cache outside `/opt/data` |
 | `HERMES_AUTOSTART` | No | `true` (default) or `false` to disable Gateway auto-start |
 | `PORT` | Automatically provided | Do not hardcode; Railway sets it at runtime |
 
@@ -91,7 +95,7 @@ CPU and memory are what the container can see, not a guaranteed Railway plan quo
 
 ## Troubleshooting
 
-**Build fails during Hermes installation:** inspect Railway build logs for upstream installer or package errors. The installer is downloaded from the official Hermes website during build, so the build requires network access and upstream availability.
+**Build fails during Hermes installation:** inspect Railway build logs for upstream installer or package errors. The installer is downloaded from the official Hermes website during build, so the build requires network access and upstream availability. If `hermes pm install` reports `No space left on device`, verify `HERMES_RUNTIME_DIR` is not set to `/opt/data`; it should remain `/usr/local/share/hermes-tools` so managed runtimes do not fill the 500 MB volume.
 
 **Gateway does not start automatically:** complete `hermes setup` and `hermes gateway setup`, check that `$HERMES_HOME/config.yaml` exists, and restart the Railway service. Ensure `HERMES_AUTOSTART=true`.
 
