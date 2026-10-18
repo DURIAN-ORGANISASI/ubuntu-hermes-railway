@@ -33,11 +33,23 @@ RUN set -eux; \
 
 # Install Hermes into the image at build time. HERMES_HOME is only for persistent
 # user config/state; HERMES_RUNTIME_DIR keeps managed tools off the small volume.
-RUN mkdir -p "${HERMES_RUNTIME_DIR}" "${HERMES_HOME}" /usr/local/share/hermes-agent \
-    && curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install-hermes.sh \
-    && bash /tmp/install-hermes.sh --dir /usr/local/share/hermes-agent --hermes-home "${HERMES_HOME}" --non-interactive --skip-browser \
-    && rm -f /tmp/install-hermes.sh \
-    && command -v hermes
+# Put dependency state and rebuildable download caches on the image filesystem BEFORE
+# the installer runs. Runtime entrypoint recreates these links after Railway mounts /opt/data.
+RUN set -eux; \
+    mkdir -p "${HERMES_HOME}/cache" \
+      "${HERMES_RUNTIME_DIR}/installs" \
+      "${HERMES_RUNTIME_DIR}/cache/uv" \
+      "${HERMES_RUNTIME_DIR}/cache/partials" \
+      "${HERMES_RUNTIME_DIR}/tools" \
+      /usr/local/share/hermes-agent; \
+    ln -s "${HERMES_RUNTIME_DIR}/installs" "${HERMES_HOME}/installs"; \
+    ln -s "${HERMES_RUNTIME_DIR}/cache/uv" "${HERMES_HOME}/cache/uv"; \
+    ln -s "${HERMES_RUNTIME_DIR}/cache/partials" "${HERMES_HOME}/cache/partials"; \
+    ln -s "${HERMES_RUNTIME_DIR}/tools" "${HERMES_HOME}/tools"; \
+    curl -fsSL https://hermes-agent.nousresearch.com/install.sh -o /tmp/install-hermes.sh; \
+    bash /tmp/install-hermes.sh --dir /usr/local/share/hermes-agent --hermes-home "${HERMES_HOME}" --non-interactive --skip-browser; \
+    rm -f /tmp/install-hermes.sh; \
+    command -v hermes
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY system-banner.sh /etc/profile.d/00-system-banner.sh
