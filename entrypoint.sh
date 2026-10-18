@@ -20,6 +20,31 @@ UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 export HERMES_HOME HERMES_RUNTIME_DIR UV_CACHE_DIR
 mkdir -p "${HERMES_HOME}" "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}" /data
 
+# Hermes PM's uv cache is hard-coded under HERMES_HOME/cache/uv in this
+# upstream build; UV_CACHE_DIR alone does not relocate it. Move this disposable
+# cache off Railway's small volume and link it to the container filesystem.
+UV_PM_CACHE_DIR="${HERMES_HOME}/cache/uv"
+UV_RUNTIME_CACHE_DIR="${HERMES_RUNTIME_DIR}/cache/uv"
+mkdir -p "${HERMES_HOME}/cache" "${HERMES_RUNTIME_DIR}/cache"
+if [[ -L "${UV_PM_CACHE_DIR}" ]]; then
+  rm -f "${UV_PM_CACHE_DIR}"
+elif [[ -d "${UV_PM_CACHE_DIR}" ]]; then
+  if [[ -d "${UV_RUNTIME_CACHE_DIR}" ]]; then
+    cp -a "${UV_PM_CACHE_DIR}/." "${UV_RUNTIME_CACHE_DIR}/" 2>/dev/null || true
+    rm -rf "${UV_PM_CACHE_DIR}"
+  else
+    mv "${UV_PM_CACHE_DIR}" "${UV_RUNTIME_CACHE_DIR}" 2>/dev/null || {
+      # uv cache is reproducible; discard only this cache if migration fails.
+      rm -rf "${UV_PM_CACHE_DIR}"
+      mkdir -p "${UV_RUNTIME_CACHE_DIR}"
+    }
+  fi
+elif [[ -e "${UV_PM_CACHE_DIR}" ]]; then
+  rm -f "${UV_PM_CACHE_DIR}"
+fi
+mkdir -p "${UV_RUNTIME_CACHE_DIR}"
+ln -s "${UV_RUNTIME_CACHE_DIR}" "${UV_PM_CACHE_DIR}"
+
 # Hermes PM stores its per-install runtime under HERMES_HOME/installs by default.
 # Railway's persistent /opt/data volume is small, so move that PM-only state to
 # the container filesystem and symlink it back. User config, sessions and memory
