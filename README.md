@@ -9,6 +9,7 @@ Deploy an Ubuntu 26.04 web terminal on Railway with Hermes Agent CLI installed, 
 - Ubuntu 26.04 container
 - Browser terminal via `ttyd`, protected by username/password
 - Hermes Agent CLI installed using the official Hermes installer in non-interactive mode
+- Telegram and Discord adapter dependencies installed during the Docker build; missing SDK dependencies fail the build early
 - Automatic login banner with OS, kernel, architecture, uptime, CPU, RAM, disk and Gateway status
 - General CLI tools including Git, curl, Python 3, pip/venv and build tools
 - Optional automatic Gateway launch/restart when Hermes configuration exists
@@ -17,7 +18,7 @@ Deploy an Ubuntu 26.04 web terminal on Railway with Hermes Agent CLI installed, 
 - Hermes managed tool runtime uses `HERMES_RUNTIME_DIR` (defaults to `/usr/local/share/hermes-tools`), separate from the small persistent volume
 - uv download/cache files go to `/tmp/uv-cache` by default, not `/opt/data`
 
-The image install uses `--skip-browser` to keep the default image lighter. Hermes runtime tools are directed to `/usr/local/share/hermes-tools`, outside the `/opt/data` volume, so Python/Node/FFmpeg managed tools do not consume the small persistent volume. The runtime directory lives in the container filesystem and may be recreated on deploy; set it during image build or keep it outside `/opt/data`. This does not configure a model or messaging platform for you; those are set up interactively in the terminal. Browser automation can be added later if needed.
+The image install uses `--skip-browser` to keep the default image lighter. The Docker build runs `hermes pm install --extra telegram --extra discord` so both messaging SDKs are prepared before the service starts. If that step fails, the image build stops and the error is visible in Railway Build Logs. Hermes runtime tools are directed to `/usr/local/share/hermes-tools`, outside the `/opt/data` volume, so Python/Node/FFmpeg managed tools do not consume the small persistent volume. The runtime directory lives in the container filesystem and may be recreated on deploy; set it during image build or keep it outside `/opt/data`. This does not configure a model, bot tokens, Discord intents, or allowed users for you; configure those interactively in the terminal. Browser automation can be added later if needed.
 
 ## Railway Variables
 
@@ -65,7 +66,7 @@ To run the Gateway manually for diagnosis, use:
 start-hermes
 ```
 
-To check status/log output, inspect Railway Deploy Logs and the Hermes logs under `$HERMES_HOME/logs/`.
+To check status and diagnose startup, run `hermes doctor` and `hermes gateway status`, then inspect Railway Deploy Logs and the Hermes logs under `$HERMES_HOME/logs/`. For Telegram, verify the bot token, allowed-user/pairing settings, and that only one active Gateway uses the same bot token. For Discord, enable **Message Content Intent** in the Developer Portal, verify the bot can view and send messages in the target channel, and remember that server messages normally require an `@mention` unless free-response behavior is configured.
 
 ## Persistent storage
 
@@ -95,11 +96,11 @@ CPU and memory are what the container can see, not a guaranteed Railway plan quo
 
 ## Troubleshooting
 
-**Build fails during Hermes installation:** inspect Railway build logs for upstream installer or package errors. The installer is downloaded from the official Hermes website during build, so the build requires network access and upstream availability. If `hermes pm install` reports `No space left on device`, verify `HERMES_RUNTIME_DIR` is not set to `/opt/data`; it should remain `/usr/local/share/hermes-tools` so managed runtimes do not fill the 500 MB volume.
+**Build fails during Hermes installation or messaging dependency setup:** inspect Railway Build Logs for upstream installer, package-index, or `hermes pm install --extra telegram --extra discord` errors. The installer and dependencies are downloaded during build, so the build requires network access and upstream availability. If `hermes pm install` reports `No space left on device`, verify `HERMES_RUNTIME_DIR` is not set to `/opt/data`; it should remain `/usr/local/share/hermes-tools` so managed runtimes do not fill the 500 MB volume.
 
 **Gateway does not start automatically:** complete `hermes setup` and `hermes gateway setup`, check that `$HERMES_HOME/config.yaml` exists, and restart the Railway service. Ensure `HERMES_AUTOSTART=true`.
 
-**Bot doesn't reply:** verify its token, Discord intents/permissions or Telegram configuration, selected model/provider, and Railway runtime logs.
+**Bot doesn't reply:** run `hermes doctor` and `hermes gateway status`, then inspect Railway Deploy Logs and `$HERMES_HOME/logs/`. Verify the selected model/provider works in a regular Hermes CLI chat. For Telegram, check the token, allowed users/pairing, and duplicate Gateway instances. For Discord, check Message Content Intent, bot channel permissions, allowed users, and whether server messages include an `@mention`. A live terminal alone does not prove that the Gateway is connected or that a platform adapter is healthy.
 
 **Config disappears after redeploy:** attach a Railway Volume at `/opt/data` and then complete setup again if the old config was already lost.
 
