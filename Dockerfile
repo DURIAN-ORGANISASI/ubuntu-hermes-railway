@@ -54,7 +54,9 @@ RUN set -eux; \
 # Install messaging adapters during the image build, so missing Telegram/Discord
 # SDK dependencies fail the build instead of first appearing when the Gateway starts.
 RUN set -eux; \
-    hermes pm install --extra telegram --extra discord
+    hermes pm install --extra messaging --extra telegram --extra discord; \
+    hermes --version; \
+    hermes pm doctor
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY system-banner.sh /etc/profile.d/00-system-banner.sh
