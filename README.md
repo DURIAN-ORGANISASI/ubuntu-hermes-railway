@@ -1,40 +1,111 @@
-# Ubuntu 26.04 + Hermes Agent untuk Railway
+<div align="center">
 
-Repository ini menjalankan terminal web yang dilindungi password dan Hermes Agent CLI di Railway. Image ini bukan VPS penuh atau desktop GUI. Gunakan Railway Volume untuk menyimpan konfigurasi Hermes dan riwayat yang perlu bertahan setelah redeploy.
+<img src="docs/brand.svg" alt="Ubuntu Hermes Railway" width="84" height="84">
+
+# Ubuntu Hermes Railway
+
+<p>
+  <a href="https://github.com/DURIAN-ORGANISASI/ubuntu-hermes-railway/actions/workflows/docker-build.yml"><img alt="Docker build and terminal smoke test" src="https://img.shields.io/github/actions/workflow/status/DURIAN-ORGANISASI/ubuntu-hermes-railway/docker-build.yml?branch=main&amp;label=build%20%26%20smoke%20test&amp;logo=githubactions&amp;logoColor=white"></a>
+  <img src="https://img.shields.io/badge/Ubuntu-26.04-E95420?style=flat&amp;logo=ubuntu&amp;logoColor=white" alt="Ubuntu 26.04">
+  <img src="https://img.shields.io/badge/Hermes-Agent-6C63FF?style=flat" alt="Hermes Agent">
+  <img src="https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=flat&amp;logo=railway&amp;logoColor=white" alt="Railway">
+  <img src="https://img.shields.io/badge/Container-Docker-2496ED?style=flat&amp;logo=docker&amp;logoColor=white" alt="Docker">
+  <a href="LICENSE"><img alt="MIT License for project files" src="https://img.shields.io/github/license/DURIAN-ORGANISASI/ubuntu-hermes-railway?label=license"></a>
+</p>
+
+<p><a href="README.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.en.md">🇬🇧 English</a></p>
+
+<p><strong>Terminal Ubuntu di Railway, lengkap dengan Hermes Agent CLI dan Gateway chat.</strong><br>
+Akses terminal lewat browser, simpan konfigurasi di Railway Volume, lalu hubungkan Hermes ke Telegram dan/atau Discord.</p>
+
+<p>
+  <a href="#coba-sekarang">Mulai cepat</a> ·
+  <a href="#fitur">Fitur</a> ·
+  <a href="#arsitektur-singkat">Arsitektur</a> ·
+  <a href="#cara-pakai">Panduan penggunaan</a> ·
+  <a href="#troubleshooting">Troubleshooting</a> ·
+  <a href="#privasi-dan-keamanan">Privasi &amp; keamanan</a> ·
+  <a href="#pengembangan">Pengembangan</a> ·
+  <a href="#sumber-atribusi-dan-lisensi">Sumber &amp; lisensi</a> ·
+  <a href="#kontribusi">Kontribusi</a> ·
+  <a href="#keamanan-proyek">Keamanan</a>
+</p>
+
+</div>
+
+---
+
+![Ilustrasi Ubuntu Hermes Railway](docs/hero.id.svg)
+
+<p align="center"><sub>Ilustrasi orisinal untuk dokumentasi — bukan screenshot resmi Ubuntu, Hermes Agent, atau Railway.</sub></p>
+
+> [!WARNING]
+> **Terminal ini memberi akses shell Linux melalui domain web.** Gunakan password unik yang kuat, jangan commit kredensial, dan batasi akses publik dengan access gateway tepercaya bila memungkinkan. Shell berjalan sebagai root di dalam container. Autentikasi password bukan pengganti pembatasan akses tambahan untuk layanan sensitif.
+
+## Coba sekarang
+
+1. Di Railway, buat project dari repository [ubuntu-hermes-railway](https://github.com/DURIAN-ORGANISASI/ubuntu-hermes-railway). Gunakan Dockerfile di root repository.
+2. Tambahkan variabel terminal, lalu pasang Railway Volume dengan mount path tepat **/opt/data** sebelum setup Hermes pertama kali.
+3. Deploy dan buat domain pada **Settings → Networking**. Login memakai username dan password yang kamu atur.
+4. Dari terminal browser, jalankan perintah berikut secara berurutan:
+
+   ~~~bash
+   hermes setup
+   hermes gateway setup
+   ~~~
+
+5. Setelah konfigurasi selesai, restart service Railway dan uji bot dari Telegram atau Discord. Lihat [panduan lengkap](#cara-pakai) jika ini instalasi pertama.
 
 ## Fitur
 
-- Base image Ubuntu 26.04.
-- Hermes Agent CLI dipasang pada saat Docker build menggunakan installer resmi Hermes.
-- Extra messaging bersama serta extra khusus Telegram dan Discord dipasang dan diperiksa saat Docker build agar kegagalan dependency muncul di Build Logs, bukan baru saat Gateway berjalan.
-- Terminal browser menggunakan ttyd dengan autentikasi username/password dan pemeriksaan Origin.
-- Banner sistem otomatis menampilkan OS, kernel, arsitektur, uptime, CPU, RAM, disk, timezone, dan status Gateway.
-- Git, curl, Python, pip/venv, compiler, dan pustaka build tersedia.
-- Gateway dapat otomatis dimulai setelah konfigurasi Hermes tersedia.
-- Default timezone Asia/Jakarta.
-- Data Hermes diarahkan ke /opt/data. Tool store dan cache yang bisa dibuat ulang diarahkan di luar volume data persisten.
-- Binary ttyd mendukung AMD64 dan ARM64.
-- GitHub Actions menguji sintaks shell, build Docker image, dan respons HTTP terminal.
+- **Ubuntu 26.04** sebagai image dasar untuk menjalankan Hermes Agent CLI.
+- **Terminal web ttyd** dengan autentikasi username/password dan pemeriksaan Origin.
+- **Hermes dipasang saat Docker build**, termasuk dependency messaging Telegram dan Discord.
+- **Gateway auto-start** setelah konfigurasi Hermes tersedia, dengan loop restart bila Gateway keluar.
+- **Penyimpanan terpisah:** konfigurasi, sesi, memori, dan log Hermes berada di /opt/data; cache dan runtime tools yang dapat dibuat ulang dipindahkan ke luar Volume.
+- **Terminal interaktif** untuk Hermes CLI, Git, Python, pip/venv, curl, compiler, dan utilitas sistem.
+- **Banner sistem** yang menampilkan informasi OS, arsitektur, uptime, CPU, RAM, disk, zona waktu, dan status Gateway.
+- **Kompatibilitas AMD64 dan ARM64** untuk binary ttyd yang disediakan.
+- **Validasi GitHub Actions** untuk sintaks shell, build Docker, autentikasi terminal, dan penolakan request tanpa autentikasi.
 
-Installer memakai opsi --non-interactive dan --skip-browser supaya build tidak menunggu input serta image lebih ringan. Repo tidak mengunci vendor/model tertentu, serta tidak menyimpan token Telegram, token Discord, API key, atau password asli.
+Installer Hermes dijalankan saat build dengan opsi non-interaktif dan tanpa browser. Repository ini tidak menyimpan API key, token bot, atau password produksi.
 
-## 1. Deploy ke Railway
+## Arsitektur singkat
 
-1. Pastikan perubahan terbaru pada branch main sudah ada di GitHub.
-2. Di Railway, pilih New Project → Deploy from GitHub Repo, lalu pilih repository ini.
-3. Pastikan Railway membangun dari Dockerfile di root repository. Jangan masukkan start command khusus kecuali memang diperlukan; image sudah memiliki ENTRYPOINT.
-4. Buka service → Settings → Networking → Generate Domain.
-5. Buat Railway Volume dan pasang mount path tepat /opt/data **sebelum melakukan setup Hermes pertama kali**. Ini penting: volume hanya menyimpan path yang dipasang. Tanpa volume di /opt/data, config, token, sesi, memori, dan log Hermes berisiko hilang saat container dibuat ulang.
-6. Buka Variables dan tambahkan nilai dari kotak salin di bagian berikut.
-7. Tunggu deployment selesai dan periksa Build Logs serta Deploy Logs. Buka domain, lalu login menggunakan TERMINAL_USER dan TERMINAL_PASSWORD.
+![Diagram arsitektur Ubuntu Hermes Railway](docs/architecture.id.svg)
 
-## 2. Railway Variables — blok utama
+1. Browser terhubung ke domain Railway melalui HTTPS.
+2. ttyd meminta autentikasi username/password dan membuka shell di container Ubuntu.
+3. Hermes CLI menyimpan konfigurasi dan data pengguna di /opt/data yang dipasang sebagai Railway Volume.
+4. Hermes Gateway berjalan sebagai proses container ketika auto-start aktif dan konfigurasi sudah tersedia.
+5. Gateway berkomunikasi dengan provider model dan platform pesan sesuai credential yang kamu konfigurasi.
 
-Salin nilai berikut ke Railway → service → Variables. Ganti dua nilai placeholder dengan username unik dan password acak milikmu sebelum deploy.
+**Direktori penting**
+
+| Path | Fungsi | Persisten? |
+| --- | --- | --- |
+| /opt/data | Konfigurasi Hermes, sesi, memori, dan log | Ya, jika Railway Volume dipasang ke path ini |
+| /data | Direktori kerja terminal | Tidak dijamin, kecuali dipasangi Volume tambahan |
+| /usr/local/share/hermes-tools | Runtime tools dan cache yang dapat dibuat ulang | Tidak; berada di filesystem container |
+| /tmp/uv-cache | Cache sementara | Tidak |
+
+## Cara pakai
+
+### 1. Buat service di Railway
+
+1. Buka Railway dan pilih **New Project → Deploy from GitHub Repo**.
+2. Pilih repository ini dan pastikan build memakai Dockerfile di root. Biarkan Start Command kosong karena image sudah memiliki ENTRYPOINT.
+3. Pada **Settings → Networking**, buat domain untuk terminal.
+4. Buat Railway Volume dan pasang mount path **/opt/data** sebelum menjalankan setup Hermes.
+5. Buka **Variables** dan isi konfigurasi berikut, kemudian deploy.
+
+### 2. Railway Variables
+
+Salin blok ini ke **Railway → service → Variables**. Ganti placeholder dengan kredensial milikmu.
 
 ~~~dotenv
 TERMINAL_USER=GANTI_DENGAN_USERNAME_UNIK
-TERMINAL_PASSWORD=GANTI_DENGAN_PASSWORD_ACAK_PANJANG_MINIMAL_24_KARAKTER
+TERMINAL_PASSWORD=GANTI_PASSWORD_ACAK_MINIMAL_24_KARAKTER
 TZ=Asia/Jakarta
 HERMES_HOME=/opt/data
 HERMES_RUNTIME_DIR=/usr/local/share/hermes-tools
@@ -42,65 +113,66 @@ UV_CACHE_DIR=/tmp/uv-cache
 HERMES_AUTOSTART=true
 ~~~
 
-Aturan variabel:
-- TERMINAL_USER wajib dan tidak boleh berisi titik dua (:).
-- TERMINAL_PASSWORD wajib, minimal 16 karakter; disarankan 24–40 karakter atau lebih. Pakai password acak yang unik untuk setiap service.
-- HERMES_HOME harus tetap /opt/data jika Volume dipasang di /opt/data.
-- HERMES_RUNTIME_DIR harus berada di luar /opt/data supaya tool Python/Node/FFmpeg yang dapat diunduh ulang tidak memenuhi volume.
-- UV_CACHE_DIR adalah cache sementara yang aman dibuat ulang.
-- HERMES_AUTOSTART=true memungkinkan Gateway start saat container menyala setelah config Hermes dibuat. Gunakan false hanya untuk diagnosis atau jika ingin menjalankan Gateway manual.
-- Jangan menambahkan PORT secara manual. Railway menyediakan PORT untuk service; image memakai 8080 hanya sebagai nilai fallback.
-- Jangan memasukkan baris placeholder token atau API key ke Variables. Masukkan kredensial melalui wizard Hermes, atau atur token sebagai variabel Railway hanya jika memang sengaja memakai metode environment-variable dan sudah mengisi nilai asli yang benar.
+Ketentuan penting:
 
-## 3. Setup Hermes yang benar — lakukan setelah Volume /opt/data terpasang
+- TERMINAL_USER wajib diisi dan tidak boleh mengandung titik dua (:).
+- TERMINAL_PASSWORD wajib minimal 16 karakter; gunakan password acak unik, disarankan 24 karakter atau lebih.
+- Pertahankan HERMES_HOME=/opt/data jika Volume dipasang di /opt/data.
+- HERMES_RUNTIME_DIR harus berada di luar /opt/data supaya runtime tools tidak memenuhi Volume yang ukurannya terbatas.
+- HERMES_AUTOSTART=true memungkinkan Gateway dimulai otomatis setelah file konfigurasi tersedia. Gunakan false hanya untuk diagnosis atau bila sengaja mengelola Gateway secara manual.
+- Jangan menambahkan PORT sendiri. Railway menyuntikkan PORT; image memakai 8080 sebagai nilai fallback.
+- Jangan mengisi API key atau token dengan placeholder. Masukkan credential nyata melalui wizard atau melalui Railway Variables hanya jika memang sengaja memakai cara tersebut.
 
-Masuk ke terminal web Railway, lalu jalankan perintah satu per satu:
+### 3. Login dan periksa terminal
+
+Setelah deployment selesai, buka domain Railway dan login. Jika terminal tidak terbuka, periksa Deploy Logs dan pastikan domain mengarah ke port service yang benar.
+
+Jalankan:
 
 ~~~bash
 command -v hermes
 hermes --version
+~~~
+
+Jika kedua perintah menampilkan lokasi dan versi Hermes, lanjutkan setup.
+
+### 4. Setup Hermes
+
+Pastikan Volume di /opt/data sudah terpasang, kemudian jalankan:
+
+~~~bash
 hermes setup
 ~~~
 
-### Pilihan wizard yang disarankan
+Nama dan urutan opsi wizard dapat berubah antarversi. Pilih berdasarkan nama atau fungsi, bukan hanya nomor pilihan.
 
-Nama dan urutan opsi dapat berubah menurut versi Hermes. Cocokkan berdasarkan nama/fungsi opsi, bukan hanya nomor urut.
+| Prompt | Saran | Catatan |
+| --- | --- | --- |
+| Model/provider | Pilih provider yang memang kamu miliki API key atau akses loginnya | Provider model berbeda dari provider pencarian web dan TTS |
+| Terminal backend | **Keep current (local)** | Menjalankan terminal dalam container ini; tidak perlu Docker-in-Docker untuk penggunaan normal |
+| Image generation | **Skip / configure later** bila belum diperlukan | Fitur opsional |
+| Text-to-speech | **Microsoft Edge TTS / Edge TTS** jika tersedia | Opsi yang tidak memerlukan API key terpisah |
+| Web search | Pilih provider yang tersedia dan isi key asli jika diminta | Jangan mengisi placeholder seperti YOUR_API_KEY |
+| Shared metrics / telemetry | **No thanks**, jika ingin tidak mengaktifkan metrik bersama | Ikuti prompt versi Hermes yang terpasang |
 
-| Prompt wizard | Pilihan yang disarankan | Alasan |
-|---|---|---|
-| Model/provider | Pilih provider yang API key atau login-nya benar-benar kamu miliki. Jika memakai NVIDIA NIM, gunakan NVIDIA dan pastikan kredensial NVIDIA aktif. | Model chat perlu kredensial valid. Provider model berbeda dari provider tools seperti pencarian web dan TTS. |
-| Terminal backend | **Keep current (local)** | Terminal dijalankan langsung di container Railway. Tidak perlu menyiapkan Docker-in-Docker hanya untuk penggunaan normal Hermes. |
-| Image generation | **Skip / configure later** jika belum membutuhkan generate gambar atau belum punya provider/key. | Fitur gambar opsional; melewatinya tidak mematikan chat Telegram/Discord. |
-| Text-to-speech (TTS) | **Microsoft Edge TTS / Edge TTS** | Opsi gratis yang tidak memerlukan API key terpisah. |
-| Web search | **Tavily** jika ingin mengikuti tutorial ini. Jika wizard meminta API key, isi key Tavily asli bila ada; gunakan skip/kosong hanya jika wizard mengizinkan. | Mode tanpa key dapat memiliki batasan lebih ketat. Pilih provider yang benar-benar ditampilkan wizard. |
-| Shared metrics / telemetry | **No thanks** | Tidak mengaktifkan pengumpulan metrik bersama. |
+Selesaikan wizard sampai muncul **Setup Complete** dan kembali ke shell. Peringatan login provider lain yang tidak kamu gunakan belum tentu berarti provider aktif gagal.
 
-Jika kamu memilih provider pencarian yang berbeda, hasil `hermes doctor` akan menampilkan provider aktif, misalnya `web search (firecrawl)`. Itu berarti Firecrawl yang aktif, bukan Tavily; bila ingin menggantinya, gunakan `hermes setup tools` atau wizard tools yang tersedia pada versi terpasang.
-
-Jangan memasukkan placeholder seperti `YOUR_API_KEY` sebagai kredensial nyata. Selesaikan wizard sampai muncul **Setup Complete** dan kembali ke shell. Perintah `hermes doctor` mungkin menampilkan peringatan login untuk provider lain yang tidak kamu gunakan; itu tidak otomatis berarti provider/model aktif gagal.
-
-### Setelah wizard selesai
-
-Jalankan:
+Periksa status:
 
 ~~~bash
 hermes doctor
 hermes status
 ~~~
 
-Pastikan nama model dan provider pada `hermes status` sesuai pilihanmu. Setelah itu, tes chat CLI biasa dengan menjalankan `hermes`; kirim pesan singkat, lalu keluar dari sesi chat sesuai petunjuk CLI.
+### 5. Konfigurasikan dan mulai Gateway
 
-Kemudian konfigurasi channel pesan:
+Konfigurasikan platform chat:
 
 ~~~bash
 hermes gateway setup
 ~~~
 
-Pilih Telegram dan/atau Discord, masukkan token bot yang benar, dan ikuti prompt otorisasi. Bila wizard menanyakan apakah akunmu boleh berbicara dengan bot, jawab **Yes** untuk akun yang benar-benar ingin kamu izinkan.
-
-**Penting tentang prompt Home Channel:** jika wizard bertanya apakah user ID yang ditampilkan akan dipakai sebagai *home channel*, pastikan ID tersebut memang milik platform/channel yang sedang dikonfigurasi. User ID Telegram bukan Channel ID Discord. Bila sedang konfigurasi Discord dan yang ditampilkan hanya user ID, pilih **No** kecuali kamu memang memiliki Channel ID Discord yang sesuai.
-
-Setelah selesai, jalankan:
+Pilih Telegram dan/atau Discord, masukkan token bot yang benar, dan atur pengguna yang diizinkan. Setelah setup selesai, periksa:
 
 ~~~bash
 hermes doctor
@@ -108,11 +180,43 @@ hermes gateway status
 hermes status
 ~~~
 
-Lalu restart/redeploy service Railway satu kali agar entrypoint membaca config yang baru dibuat dan memulai Gateway otomatis. **Jangan menjalankan `hermes gateway` di terminal browser sebagai metode permanen.** Perintah itu berjalan di foreground dan dapat berhenti ketika sesi terminal ditutup. Dengan `HERMES_AUTOSTART=true`, entrypoint repo ini yang seharusnya menjalankan Gateway terpisah dari sesi `ttyd`; setelah restart kamu boleh menutup tab terminal. Jangan menjalankan Gateway kedua secara manual pada service yang sama. Jika `hermes status` menunjukkan Gateway stopped, lanjutkan ke bagian Troubleshooting di bawah.
+Dengan HERMES_AUTOSTART=true, entrypoint menjalankan Gateway setelah menemukan /opt/data/config.yaml. Karena setup dilakukan ketika container mungkin sudah berjalan, **restart/redeploy service Railway setelah wizard selesai**. Jangan menyalakan Gateway kedua secara manual dengan token yang sama.
 
-### Pengaturan streaming dan diagnosis respons lambat
+Jika kamu sengaja menonaktifkan auto-start dengan HERMES_AUTOSTART=false, perintah start-hermes menjalankan Gateway di foreground. Jangan jadikan sesi terminal interaktif sebagai pengganti proses Gateway yang dikelola container.
 
-Streaming menentukan apakah jawaban ditampilkan bertahap; streaming **tidak** mempercepat model/provider yang lambat mengirim token pertama. Jika ingin Telegram menampilkan jawaban secara bertahap, periksa dan atur nilai berikut:
+### 6. Hubungkan Telegram
+
+1. Buka Telegram dan chat @BotFather.
+2. Kirim /newbot jika belum punya bot, lalu simpan token yang diberikan secara rahasia.
+3. Jalankan hermes gateway setup di terminal Railway dan pilih Telegram.
+4. Masukkan token bot, lalu ikuti prompt untuk mengizinkan user atau pairing.
+5. Bila mendapat kode pairing, lihat permintaan yang tampil di Telegram dan setujui dari terminal menggunakan kode aktual:
+
+   ~~~bash
+   hermes pairing list
+   hermes pairing approve telegram KODE_PAIRING_AKTUAL
+   ~~~
+
+   Ganti KODE_PAIRING_AKTUAL dengan kode nyata; jangan menyalin teks placeholder secara literal.
+6. Restart service Railway, lalu kirim /start dan pesan uji ke bot.
+
+Jangan menjalankan dua Gateway dengan token Telegram yang sama karena polling bisa bertabrakan.
+
+### 7. Hubungkan Discord
+
+1. Buat aplikasi pada [Discord Developer Portal](https://discord.com/developers/applications), lalu buat atau buka tab **Bot** dan simpan token bot.
+2. Aktifkan **Message Content Intent** pada Bot → Privileged Gateway Intents. Aktifkan Server Members Intent hanya jika diperlukan oleh konfigurasi aksesmu atau error yang ditampilkan.
+3. Pada OAuth2 → URL Generator, pilih scope bot dan applications.commands; berikan permission minimum yang diperlukan, termasuk View Channels, Send Messages, dan Read Message History untuk channel yang diuji.
+4. Undang bot ke server yang benar.
+5. Aktifkan Developer Mode di Discord lalu salin User ID numerik milikmu.
+6. Jalankan hermes gateway setup, pilih Discord, masukkan token, dan selesaikan allowlist atau pairing.
+7. Tes lewat DM terlebih dahulu. Di channel server, Hermes umumnya memerlukan mention bot kecuali pengaturannya menyatakan lain.
+
+Token bot mengautentikasi aplikasi, sedangkan allowlist menentukan pengguna yang boleh berinteraksi. Bot yang sudah online belum tentu punya izin membaca setiap channel.
+
+### 8. Pengaturan streaming dan respons lambat
+
+Streaming mengubah cara jawaban ditampilkan, tetapi tidak menjamin model/provider memberi token pertama lebih cepat. Untuk memeriksa pengaturan Telegram:
 
 ~~~bash
 hermes config set streaming.enabled true
@@ -122,163 +226,112 @@ hermes config get display.platforms.telegram.streaming
 hermes config get display.platforms.discord.streaming
 ~~~
 
-Nilai true, true, false berarti streaming global aktif, streaming Telegram aktif, dan Discord tetap mengirim jawaban utuh. Jika ingin streaming juga di Discord, ubah pengaturan Discord secara eksplisit. Setelah mengubah konfigurasi yang dibaca oleh Gateway, restart service Railway agar Gateway memuat konfigurasi baru.
+Setelah perubahan konfigurasi Gateway, restart service agar Gateway memuat pengaturan terbaru.
 
-Jika Telegram terus menampilkan indikator mengetik atau log memperlihatkan pesan **waiting for stream response (..., first_chunk)**, periksa dulu model yang dipilih. Untuk menguji respons model dari terminal dengan satu permintaan:
-
-~~~bash
-hermes -c "Balas hanya: OK"
-~~~
-
-Atau jalankan perintah hermes, lalu ketik Balas hanya: OK pada prompt chat yang muncul. **Jangan** mengetik perintah hermes diikuti Balas hanya: OK sebagai argumen biasa; CLI dapat menganggap kata pertama sebagai nama subcommand.
-
-- Jika tes CLI juga lambat, masalah lebih mungkin berada pada model/provider atau tingkat reasoning. Coba model lain yang terbukti merespons lebih cepat lewat perintah hermes model, atau turunkan tingkat reasoning jika model mendukung pengaturannya.
-- Jika tes CLI cepat tetapi Telegram lambat, periksa model aktif lewat hermes status dan log Gateway. Pastikan Gateway memakai konfigurasi model yang sama dan periksa error/timeout.
-- Pengaturan reasoning opsional untuk model yang mendukungnya:
-
-~~~bash
-hermes config set agent.reasoning_effort low
-hermes config get agent.reasoning_effort
-~~~
-
-Nilai low dapat mengurangi waktu berpikir pada model yang menghormati parameter tersebut, dengan kemungkinan trade-off pada kedalaman jawaban. Pengaturan ini bukan jaminan latensi dan tidak menggantikan pengujian model. Jangan mengganti model default dalam tutorial secara paksa; pilih model yang paling sesuai dengan kebutuhan dan hasil tesmu.
-
-## 4. Telegram — dari nol sampai tes pesan
-
-1. Buka Telegram dan chat dengan @BotFather.
-2. Kirim /newbot, ikuti instruksi untuk nama dan username bot, lalu simpan token yang diberikan secara rahasia.
-3. Cari user ID numerik akun Telegram milikmu, misalnya melalui @userinfobot.
-4. Dari terminal Railway, jalankan hermes gateway setup. Pilih Telegram, masukkan token dari BotFather, dan masukkan user ID jika wizard memintanya.
-5. Jika setup menawarkan pairing atau allowlist, selesaikan langkah otorisasi. Gateway secara default dapat menolak pengguna yang belum diizinkan.
-6. Restart service Railway, buka chat pribadi dengan bot dan kirim /start, lalu kirim pesan biasa.
-
-Jika mendapat kode pairing, setujui dari terminal menggunakan kode yang tampil pada Telegram:
-
-~~~bash
-hermes pairing list
-hermes pairing approve telegram KODE_PAIRING_DARI_BOT
-~~~
-
-Jangan menyalin teks placeholder KODE_PAIRING_DARI_BOT secara literal; ganti dengan kode nyata. Jangan jalankan dua Gateway aktif menggunakan token Telegram yang sama karena dapat menyebabkan polling bertabrakan.
-
-## 5. Discord — dari Developer Portal sampai tes pesan
-
-Ikuti semua langkah ini; bot yang sudah online tetap bisa mengabaikan pesan jika akses pengguna atau intent belum benar.
-
-1. Buka https://discord.com/developers/applications, buat application, masuk tab **Bot**, lalu salin token bot secara rahasia.
-2. Pada **Bot → Privileged Gateway Intents**, aktifkan **Message Content Intent** dan simpan. Hermes memerlukan intent ini untuk membaca isi pesan. Aktifkan **Server Members Intent** juga bila menggunakan allowlist berbasis username atau role; jika muncul `PrivilegedIntentsRequired`, periksa kedua intent tersebut.
-3. Pada **OAuth2 → URL Generator**, centang scope `bot` dan `applications.commands`. Berikan permission seperlunya, minimal View Channels, Send Messages, dan Read Message History. Buka URL yang dihasilkan untuk mengundang bot ke server yang benar.
-4. Aktifkan **Developer Mode** di Discord (User Settings → Advanced). Gunakan **Copy User ID** untuk memperoleh user ID Discord numerik milikmu. Jangan memasukkan username/nickname sebagai pengganti ID numerik jika wizard meminta ID.
-5. Dari terminal Railway, jalankan `hermes gateway setup`, pilih Discord, masukkan token yang benar, dan bila ditanya **“Allow yourself (...) to talk to the bot?”**, jawab **Yes** untuk akun Discord milikmu.
-6. Pastikan konfigurasi akses mengizinkan user-mu. Untuk pemakaian privat, izinkan ID numerik milikmu melalui wizard. Jika muncul `No Discord access policy configured` atau `User not allowed`, lihat langkah diagnosis pada bagian Troubleshooting; jangan mengaktifkan akses semua pengguna untuk bot publik.
-7. Pastikan bot sudah diundang dan memiliki izin melihat channel yang diuji. Tes pertama lewat DM: buka profil bot, klik Message, lalu kirim pesan biasa.
-
-### Aturan balasan Discord
-
-- **DM:** secara default Hermes merespons pesan langsung tanpa perlu mention.
-- **Channel server:** secara default Hermes hanya merespons ketika kamu menyebut `@DURIAN HERMES` (atau nama bot yang kamu pilih). Pesan biasa tanpa mention akan diabaikan.
-- Bot yang diundang ke server belum tentu memiliki izin untuk melihat setiap channel. Periksa pengaturan permission channel dan role bot.
-- Token bot dan user ID adalah dua hal berbeda. Token mengautentikasi bot; `DISCORD_ALLOWED_USERS` mengizinkan akun pengguna untuk berinteraksi dengannya.
-
-Jika Telegram sudah berfungsi tetapi Discord tidak, jangan ubah provider/model atau konfigurasi Telegram. Fokus periksa Discord token, intents, allowlist, izin channel, dan aturan mention.
-
-## 6. Penyimpanan dan auto-start
-
-- /opt/data — lokasi persisten yang direkomendasikan untuk konfigurasi, file .env internal Hermes, sesi, memori, dan log.
-- /data — direktori kerja terminal untuk file umum. File di sini tidak dijamin persisten kecuali dibuatkan Volume tambahan.
-- /usr/local/share/hermes-tools — runtime tools yang dapat dibuat ulang. Biarkan terpisah dari /opt/data.
-- /tmp/uv-cache — cache download sementara; boleh hilang saat container dibuat ulang.
-
-Gateway dimulai otomatis hanya ketika HERMES_AUTOSTART=true dan file konfigurasi Hermes sudah tersedia saat container mulai. Bila menyelesaikan wizard ketika service sedang berjalan, restart service setelah setup. Untuk diagnosis saat auto-start dinonaktifkan, jalankan start-hermes dari satu terminal saja, dan jangan menyalakan Gateway manual jika loop auto-start sudah aktif.
-
-## 7. Variabel opsional untuk token channel
-
-Cara yang direkomendasikan untuk instalasi pertama adalah hermes gateway setup seperti langkah di atas. Jika sengaja memilih menyimpan token sebagai Railway Variables, masukkan nilai asli (jangan kosong dan jangan memakai placeholder) untuk channel yang dipakai:
-
-~~~dotenv
-TELEGRAM_BOT_TOKEN=ISI_TOKEN_ASLI_DARI_BOTFATHER
-TELEGRAM_ALLOWED_USERS=ID_TELEGRAM_NUMERIK_MILIKMU
-DISCORD_BOT_TOKEN=ISI_TOKEN_ASLI_DARI_DISCORD_DEVELOPER_PORTAL
-DISCORD_ALLOWED_USERS=ID_USER_DISCORD_NUMERIK_MILIKMU
-~~~
-
-Tambahkan hanya baris channel yang benar-benar digunakan. Variabel token yang ditetapkan di Railway dapat mengungguli nilai dari file .env Hermes. Jadi jangan menetapkan token lama atau placeholder di Railway jika sudah mengisi token yang benar melalui wizard. Jangan commit token ke GitHub.
-
-## 8. Troubleshooting
-
-**Model lambat / Telegram terus mengetik sebelum jawaban muncul**  
-Jika muncul pesan seperti **waiting for stream response (150s, first_chunk)**, Gateway belum menerima chunk jawaban pertama tepat waktu. Ini berbeda dari sekadar animasi mengetik. Tes model dengan perintah satu-shot berikut atau jalankan Hermes interaktif lalu ketik pesan pada prompt chat:
+Untuk menguji provider dari terminal dengan satu permintaan:
 
 ~~~bash
 hermes -c "Balas hanya: OK"
 ~~~
 
-Jangan mengetik perintah Hermes diikuti Balas hanya: OK sebagai argumen biasa, sebab itu dapat dibaca sebagai nama subcommand. Jika CLI dan Telegram sama-sama lambat, coba model yang lebih cepat melalui hermes model; jika model mendukung reasoning control, uji pengaturan agent.reasoning_effort ke low. Jika CLI cepat tetapi Telegram lambat, periksa model aktif, konfigurasi Gateway, dan log berikut:
+Jika perintah CLI juga lambat, masalah mungkin berada pada provider, model, reasoning, atau jaringan. Jika CLI cepat tetapi chat bot lambat, periksa status Gateway serta log deploy Railway.
+
+## Troubleshooting
+
+| Masalah | Yang perlu diperiksa |
+| --- | --- |
+| Domain tidak terbuka | Status service, Settings → Networking, PORT, dan Deploy Logs |
+| Login terminal gagal | TERMINAL_USER dan TERMINAL_PASSWORD; password minimal 16 karakter dan username tidak boleh berisi titik dua |
+| Service berhenti saat startup | Periksa log validasi environment, permission, dan error entrypoint |
+| Setup hilang setelah redeploy | Pastikan Railway Volume benar-benar terpasang ke /opt/data sebelum setup |
+| Hermes tidak ditemukan | Periksa build terbaru, Build Logs, lalu jalankan command -v hermes |
+| Config tidak ditemukan | Selesaikan hermes setup dan pastikan HERMES_HOME=/opt/data |
+| Gateway stopped setelah setup | Pastikan HERMES_AUTOSTART=true, config tersedia, lalu restart service satu kali |
+| Telegram tidak merespons | Periksa token, izin/pairing user, Gateway status, dan pastikan tidak ada Gateway lain dengan token sama |
+| Discord online tetapi diam | Periksa Message Content Intent, user allowlist, permission channel, lalu coba DM atau mention bot |
+| User not allowed / no access policy | Ulangi hermes gateway setup dan pastikan user ID numerik diizinkan |
+| PrivilegedIntentsRequired | Periksa Privileged Gateway Intents di Discord Developer Portal |
+| Respons model lambat / first_chunk timeout | Jalankan hermes -c "Balas hanya: OK", periksa provider/model, lalu periksa status dan log Gateway |
+| Provider menunjukkan peringatan login | Pastikan provider/model aktif di hermes status; provider yang tidak dipakai bisa tetap menunjukkan peringatan |
+| Terminal menolak password | Periksa panjang password, variabel Railway, dan log startup |
+
+Untuk memeriksa status layanan dari terminal:
 
 ~~~bash
 hermes status
 hermes gateway status
-grep -Ei 'first_chunk|no chunks|timeout|stream|nvidia|telegram|error|exception' /opt/data/logs/*.log | tail -n 100
+hermes doctor
 ~~~
 
-Jangan menganggap streaming.enabled=true akan memperbaiki waktu token pertama. Streaming mengubah cara jawaban ditampilkan; kecepatan awal tetap bergantung pada model/provider, reasoning, jaringan, dan Gateway.
+## Privasi dan keamanan
 
-**Atur streaming Telegram**  
-Untuk jawaban progresif, gunakan:
+- **Terminal publik:** domain Railway dapat dijangkau dari internet. Password melindungi login, tetapi bukan pengganti access gateway tepercaya untuk sistem sensitif.
+- **Hak akses:** shell berjalan sebagai root di dalam container. Berhati-hatilah menjalankan perintah yang mengubah atau menghapus file.
+- **Credential:** jangan masukkan API key, token Telegram/Discord, atau password ke GitHub, README, screenshot, maupun log publik. Rotasi credential jika bocor.
+- **Allowlist:** izinkan hanya user yang benar-benar kamu percayai, khususnya bila Hermes memiliki tools yang dapat membaca file atau menjalankan perintah.
+- **Persistensi:** hanya data di path yang dipasang sebagai Railway Volume yang dijamin bertahan sesuai konfigurasi Volume. /data tidak persisten secara default.
+- **Gateway tunggal:** jangan gunakan token bot yang sama pada beberapa Gateway aktif sekaligus.
+- **Biaya dan kuota:** pemakaian model dan tools mengikuti kuota, biaya, serta ketentuan provider terkait.
+
+## Pengembangan
+
+Clone repository dan periksa sintaks shell:
 
 ~~~bash
-hermes config set streaming.enabled true
-hermes config set display.platforms.telegram.streaming true
-hermes config get streaming.enabled
-hermes config get display.platforms.telegram.streaming
-hermes config get display.platforms.discord.streaming
+git clone https://github.com/DURIAN-ORGANISASI/ubuntu-hermes-railway.git
+cd ubuntu-hermes-railway
+bash -n entrypoint.sh
+bash -n start-hermes
+bash -n system-banner.sh
+docker build --tag ubuntu-hermes-railway .
 ~~~
 
-Streaming global harus aktif agar opsi streaming per-platform bekerja. Nilai true / true / false berarti global aktif, Telegram streaming, Discord jawaban utuh. Setelah perubahan, restart service Railway. Perubahan ini tidak otomatis membuat model lebih cepat.
+GitHub Actions menjalankan pemeriksaan sintaks, membangun image, lalu menguji bahwa terminal berautentikasi mengembalikan HTTP 200 dan request tanpa autentikasi ditolak. Tes ini tidak memvalidasi API provider, Telegram/Discord, atau deployment Railway yang sedang berjalan.
 
-**Gateway mati saat terminal ditutup / Gateway berstatus stopped**  
-Jangan mengandalkan perintah hermes gateway yang dijalankan di shell interaktif karena perintah itu berjalan di foreground. Pastikan HERMES_AUTOSTART=true, file /opt/data/config.yaml sudah ada, dan Railway Volume terpasang pada /opt/data. Setelah wizard selesai, lakukan Redeploy service dari commit terbaru, lalu buka Deploy Logs dan cari pesan **Hermes config found; starting Gateway supervisor.** serta **Starting Hermes Gateway...**. Tutup tab terminal dan tes bot lagi. Bila log menyebut Gateway sedang berjalan manual, itu hanya menjelaskan proses tersebut tidak dipasang sebagai system service; di container ini, entrypoint Railway seharusnya yang mengelola auto-start. Jangan menjalankan Gateway ganda dengan token yang sama.
+### Struktur repository
 
-**Bot online tetapi tidak membalas di Discord**  
-Periksa berurutan: (1) **Message Content Intent** aktif di Developer Portal; (2) user ID numerik milikmu diizinkan; (3) bot punya View Channel, Send Messages, dan Read Message History; (4) untuk channel server, kirim pesan dengan mention bot; (5) coba DM sebagai tes awal.
+~~~text
+.
+├── Dockerfile
+├── entrypoint.sh
+├── start-hermes
+├── system-banner.sh
+├── .env.example
+├── LICENSE
+├── README.md
+├── README.en.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── docs/
+│   ├── brand.svg
+│   ├── hero.id.svg
+│   ├── architecture.id.svg
+│   ├── architecture.en.svg
+│   └── SOURCES.md
+└── .github/
+    └── workflows/
+        └── docker-build.yml
+~~~
 
-**Log menampilkan No Discord access policy configured atau User not allowed**  
-Discord dapat tersambung tetapi menolak pesan masuk jika tidak ada kebijakan akses yang mengizinkan user. Jalankan ulang hermes gateway setup untuk memperbaiki otorisasi melalui wizard, atau periksa DISCORD_ALLOWED_USERS di /opt/data/.env jika mengelola variabel secara manual. Isinya harus berupa user ID Discord numerik yang benar. Jangan menimpa file .env secara keseluruhan, karena file itu juga dapat berisi kredensial provider dan bot.
+## Sumber, atribusi, dan lisensi
 
-**Log menampilkan PrivilegedIntentsRequired atau bot langsung offline**  
-Buka Developer Portal → Application → Bot → Privileged Gateway Intents. Aktifkan **Message Content Intent**; aktifkan juga **Server Members Intent** bila menggunakan username/role allowlist atau bila error meminta intent tersebut. Simpan pengaturan, kemudian restart service Railway.
+Lihat [docs/SOURCES.md](docs/SOURCES.md) untuk dokumentasi upstream, catatan aset SVG, dan penjelasan cakupan lisensi.
 
-**Bot tidak membalas pesan biasa di channel server**  
-Coba sebut bot secara eksplisit, misalnya @DURIAN HERMES halo. Ini perilaku default. DM tidak memerlukan mention.
+- **Repository ini:** menggunakan [MIT License](LICENSE) untuk materi proyek yang tercakup, termasuk konfigurasi, script pembungkus, dan dokumentasi buatan repository.
+- **Hermes Agent:** software upstream dan dependensinya tunduk pada lisensi serta ketentuan masing-masing; MIT di repository ini tidak otomatis melisensikan ulang semua komponennya.
+- **Ubuntu, ttyd, Docker, Railway, Telegram, dan Discord:** nama, merek, produk, serta layanannya dimiliki oleh pihak masing-masing dan tunduk pada ketentuan mereka sendiri.
+- Tinjau lisensi dan dokumentasi upstream sebelum mendistribusikan ulang image atau mengaktifkan fitur tambahan.
 
-**Telegram tidak merespons sama sekali**  
-Pastikan token BotFather benar, akun telah diizinkan/pairing selesai, dan tidak ada Gateway lain yang menggunakan token Telegram yang sama. Periksa juga hermes gateway status dan log Gateway.
+## Kontribusi
 
-**hermes doctor menunjukkan provider lain tidak login**  
-Peringatan provider yang tidak dipilih tidak otomatis berarti model utama gagal. Periksa nilai Model/Provider di hermes status dan bagian API Connectivity pada hermes doctor.
+Issues dan Pull Requests dipersilakan. Baca [CONTRIBUTING.md](CONTRIBUTING.md) untuk pemeriksaan yang perlu dilakukan. Jangan unggah password, API key, token bot, file konfigurasi pribadi, atau log yang berisi rahasia.
 
-**hermes: command not found atau build gagal**  
-Periksa Build Logs, pastikan deployment memakai commit terbaru, dan jalankan command -v hermes dari terminal. Installer serta adapter Telegram/Discord dipasang saat image dibuat; jangan instal ulang pada setiap startup.
+## Keamanan proyek
 
-**Terminal menolak login atau service restart terus**  
-Pastikan TERMINAL_USER dan TERMINAL_PASSWORD ada di Variables; password minimal 16 karakter, disarankan 24 karakter atau lebih. Periksa Deploy Logs untuk pesan validasi.
+Untuk melaporkan potensi kerentanan, ikuti [SECURITY.md](SECURITY.md). Hindari memublikasikan token, password, alamat terminal privat, atau detail deployment yang dapat membuka akses ke service.
 
-**Konfigurasi hilang setelah redeploy**  
-Pasang Railway Volume di /opt/data sebelum menjalankan wizard pertama kali. Volume yang hanya dipasang di /data tidak melindungi konfigurasi Hermes.
+---
 
-## 9. Keamanan
-
-- Terminal publik menjalankan shell root di dalam container. Password yang kuat wajib.
-- Jangan commit password terminal, API key, atau token bot ke repository.
-- Jangan membagikan token bot pada chat atau screenshot; rotasi/revoke token jika terlanjur bocor.
-- Hindari mengaktifkan akses semua pengguna pada bot yang punya akses ke tools atau terminal.
-- Resource, waktu aktif, dan filesystem tetap mengikuti batas serta kebijakan Railway.
-
-## Referensi resmi
-
-- Instalasi Hermes: https://hermes-agent.nousresearch.com/docs/getting-started/installation
-- Messaging Gateway: https://hermes-agent.nousresearch.com/docs/user-guide/messaging
-- Telegram setup: https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram
-- Discord setup: https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord
-- Environment variables: https://hermes-agent.nousresearch.com/docs/reference/environment-variables
-- Upstream Hermes: https://github.com/NousResearch/hermes-agent
+<div align="center">
+  <sub>Ubuntu Hermes Railway — terminal persisten untuk Hermes Agent di Railway.</sub>
+</div>
