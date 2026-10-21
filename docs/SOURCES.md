@@ -16,11 +16,12 @@ Dokumen ini mencatat referensi teknis serta batas cakupan lisensi untuk **Ubuntu
 - [Railway documentation](https://docs.railway.com/): deployment, networking, variables, dan volumes.
 - [Telegram Bot API](https://core.telegram.org/bots/api) dan [Discord Developer Documentation](https://discord.com/developers/docs/intro): platform bot pihak ketiga.
 
-## Aset dokumentasi
+## Logo resmi dan aset dokumentasi
 
-- `brand.svg`, `hero.id.svg`, `architecture.id.svg`, dan `architecture.en.svg` dibuat khusus untuk dokumentasi repository ini.
-- Ilustrasi tersebut adalah diagram konseptual, bukan screenshot aplikasi langsung atau aset resmi Ubuntu, Hermes Agent, Railway, Telegram, maupun Discord.
-- Merek dan nama produk pihak ketiga tetap dimiliki oleh pemiliknya masing-masing.
+- **Logo Ubuntu Circle of Friends:** ditautkan langsung dari aset resmi Canonical, `https://assets.ubuntu.com/v1/ce518a18-CoF-2022_solid+O.svg`. Canonical mencantumkan aset ini pada [halaman Design Resources](https://design.ubuntu.com/resources) dan [repository sumber situs desain](https://github.com/canonical/design.ubuntu.com/blob/main/_data/downloads.yaml).
+- **Logo Hermes Agent:** ditautkan dari [favicon SVG pada repository upstream NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent/blob/main/website/static/img/favicon.svg).
+- `hero.id.svg`, `architecture.id.svg`, dan `architecture.en.svg` adalah ilustrasi dokumentasi orisinal untuk repository ini; bukan screenshot aplikasi atau logo resmi Ubuntu, Hermes Agent, Railway, Telegram, maupun Discord.
+- Logo Ubuntu dan Hermes tetap merupakan merek/aset masing-masing pemilik. Logo ditampilkan untuk mengidentifikasi sistem dasar dan agent yang digunakan, bukan menyatakan afiliasi resmi.
 
 ## Cakupan lisensi
 
