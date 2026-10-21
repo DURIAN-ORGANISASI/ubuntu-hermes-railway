@@ -16,7 +16,7 @@ from urllib.parse import urlencode, quote
 from urllib.request import Request, urlopen
 
 API = "https://api.github.com"
-API_VERSION = "2022-11-28"
+API_VERSION = "2026-03-10"
 USER_AGENT = "ubuntu-hermes-railway-github-repo-search-star"
 
 
