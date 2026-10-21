@@ -67,6 +67,7 @@ RUN chmod 0755 /usr/local/bin/entrypoint.sh /usr/local/bin/start-hermes /etc/pro
     && bash -n /usr/local/bin/entrypoint.sh /usr/local/bin/start-hermes /etc/profile.d/00-system-banner.sh \
     && mkdir -p /data /opt/data /usr/local/share/hermes-tools \
     && chmod 0755 /usr/local/share/ubuntu-hermes-railway/skills/github-repo-search-star/scripts/search_and_star.py \
+    && python3 -m py_compile /usr/local/share/ubuntu-hermes-railway/skills/github-repo-search-star/scripts/search_and_star.py \
     && chmod 0777 /data \
     && chmod 0755 /opt/data /usr/local/share/hermes-tools
 
