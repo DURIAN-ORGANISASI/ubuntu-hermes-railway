@@ -61,10 +61,12 @@ RUN set -eux; \
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY system-banner.sh /etc/profile.d/00-system-banner.sh
 COPY start-hermes /usr/local/bin/start-hermes
+COPY skills/github-repo-search-star /usr/local/share/ubuntu-hermes-railway/skills/github-repo-search-star
 
 RUN chmod 0755 /usr/local/bin/entrypoint.sh /usr/local/bin/start-hermes /etc/profile.d/00-system-banner.sh \
     && bash -n /usr/local/bin/entrypoint.sh /usr/local/bin/start-hermes /etc/profile.d/00-system-banner.sh \
     && mkdir -p /data /opt/data /usr/local/share/hermes-tools \
+    && chmod 0755 /usr/local/share/ubuntu-hermes-railway/skills/github-repo-search-star/scripts/search_and_star.py \
     && chmod 0777 /data \
     && chmod 0755 /opt/data /usr/local/share/hermes-tools
 
