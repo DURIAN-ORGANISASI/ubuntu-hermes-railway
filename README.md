@@ -66,6 +66,7 @@ Akses terminal lewat browser, simpan konfigurasi di Railway Volume, lalu hubungk
 - **Gateway auto-start** setelah konfigurasi Hermes tersedia, dengan loop restart bila Gateway keluar.
 - **Penyimpanan terpisah:** konfigurasi, sesi, memori, dan log Hermes berada di /opt/data; cache dan runtime tools yang dapat dibuat ulang dipindahkan ke luar Volume.
 - **Terminal interaktif** untuk Hermes CLI, Git, Python, pip/venv, curl, compiler, dan utilitas sistem.
+- **Pencarian repo GitHub + Auto-Star dari chat:** Hermes dapat mencari repo berdasarkan topik dan memberi bintang ke akun pemilik token tanpa kamu perlu mengirim URL repo satu per satu.
 - **Banner sistem** yang menampilkan informasi OS, arsitektur, uptime, CPU, RAM, disk, zona waktu, dan status Gateway.
 - **Kompatibilitas AMD64 dan ARM64** untuk binary ttyd yang disediakan.
 - **Validasi GitHub Actions** untuk sintaks shell, build Docker, autentikasi terminal, dan penolakan request tanpa autentikasi.
@@ -237,6 +238,55 @@ hermes -c "Balas hanya: OK"
 ~~~
 
 Jika perintah CLI juga lambat, masalah mungkin berada pada provider, model, reasoning, atau jaringan. Jika CLI cepat tetapi chat bot lambat, periksa status Gateway serta log deploy Railway.
+
+### 9. Cari repo dan beri bintang GitHub langsung dari chat
+
+Fitur ini dibundel ke image. Saat container mulai, `entrypoint.sh` memasang skill ke `/opt/data/skills/github/github-repo-search-star/` agar tersedia meskipun Railway Volume menutupi file di image. Deploy ulang service setelah perubahan repo ini masuk ke branch yang kamu gunakan.
+
+**Konfigurasi token**
+
+Tambahkan variabel rahasia di **Railway → service → Variables**:
+
+- Name: `GITHUB_TOKEN`
+- Value: Fine-grained Personal Access Token milik akun GitHub yang akan menerima bintang.
+
+Gunakan izin minimum:
+- **User permissions → Starring: Read and write**
+- **Repository permissions → Metadata: Read-only**
+
+Jangan commit token ke repo dan jangan mengirimnya lewat Telegram/Discord. Jika token ditaruh di `/opt/data/.env` sebagai alternatif, batasi izin file dengan `chmod 600 /opt/data/.env`; Railway Variables tetap disarankan.
+
+**Perintah chat**
+
+Cukup tulis instruksi biasa kepada bot Telegram/Discord, tanpa URL repo:
+
+~~~text
+Carikan repo GitHub tentang AI agent yang berjalan di Ubuntu, lalu kasih bintang ke 5 repo paling relevan.
+~~~
+
+Contoh lain:
+
+~~~text
+Carikan 10 repo tentang skill Hermes Agent dan beri bintang ke repo yang belum ada di Starred saya.
+~~~
+
+Jika jumlah tidak disebutkan, default-nya 5 bintang baru. Maksimal 20 repo baru per satu permintaan. Script memprioritaskan relevansi dan jumlah bintang, melewati repo yang sudah kamu bintangi, serta mengecualikan fork dan repo arsip secara default. Bintang akan masuk ke akun pemilik `GITHUB_TOKEN`.
+
+**Tes pencarian tanpa mengubah Starred**
+
+Setelah deploy dan mengisi token, jalankan dari terminal Railway:
+
+~~~bash
+python3 "$HERMES_HOME/skills/github/github-repo-search-star/scripts/search_and_star.py" --query "AI agent Ubuntu" --count 5 --dry-run
+~~~
+
+Opsi `--dry-run` hanya menampilkan kandidat dan tidak memberi bintang. Jangan hilangkan opsi itu kecuali kamu memang ingin skrip memberi bintang. Untuk mengecek apakah skill ditemukan Hermes:
+
+~~~bash
+hermes skills list | grep -i github-repo-search-star
+~~~
+
+Jika token ditambahkan atau diubah, restart service Gateway agar proses memuat environment variable yang terbaru.
 
 ## Troubleshooting
 
