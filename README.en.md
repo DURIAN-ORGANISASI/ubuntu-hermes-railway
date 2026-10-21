@@ -1,6 +1,8 @@
 <div align="center">
 
-<img src="docs/brand.svg" alt="Ubuntu Hermes Railway" width="84" height="84">
+<p>
+  <img src="https://assets.ubuntu.com/v1/ce518a18-CoF-2022_solid+O.svg" alt="Official Ubuntu Circle of Friends logo" width="40" height="40"> &nbsp;<img src="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/img/favicon.svg" alt="Official Hermes Agent logo" width="40" height="40">
+</p>
 
 # Ubuntu Hermes Railway
 
