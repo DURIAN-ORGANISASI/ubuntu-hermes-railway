@@ -1,6 +1,8 @@
 <div align="center">
 
-<img src="docs/brand.svg" alt="Ubuntu Hermes Railway" width="84" height="84">
+<p>
+  <img src="https://assets.ubuntu.com/v1/ce518a18-CoF-2022_solid+O.svg" alt="Logo resmi Ubuntu — Circle of Friends" width="40" height="40"> &nbsp;<img src="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/img/favicon.svg" alt="Logo resmi Hermes Agent" width="40" height="40">
+</p>
 
 # Ubuntu Hermes Railway
 
@@ -303,7 +305,6 @@ GitHub Actions menjalankan pemeriksaan sintaks, membangun image, lalu menguji ba
 ├── CONTRIBUTING.md
 ├── SECURITY.md
 ├── docs/
-│   ├── brand.svg
 │   ├── hero.id.svg
 │   ├── architecture.id.svg
 │   ├── architecture.en.svg
