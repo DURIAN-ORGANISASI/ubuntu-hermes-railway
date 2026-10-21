@@ -66,6 +66,7 @@ Open a browser terminal, keep Hermes configuration in a Railway Volume, and conn
 - **Gateway auto-start** after Hermes configuration exists, with a restart loop if the Gateway exits.
 - **Separated storage:** configuration, sessions, memory, and logs stay in /opt/data; rebuildable tools and caches are redirected outside the Volume.
 - **Interactive shell** with Git, Python, pip/venv, curl, compilers, and system utilities.
+- **GitHub repository search + auto-star from chat:** Hermes can search by topic and star relevant results in the token owner's account without requiring a repository URL from the user.
 - **System banner** with OS, architecture, uptime, CPU, memory, disk, timezone, and Gateway status.
 - **AMD64 and ARM64** support for the supplied ttyd binaries.
 - **GitHub Actions checks** shell syntax, builds the Docker image, tests authenticated access, and verifies that unauthenticated requests are rejected.
@@ -235,6 +236,55 @@ hermes -c "Reply only: OK"
 ~~~
 
 If the CLI is also slow, the issue may relate to the provider, model, reasoning, or network. If CLI replies quickly but chat responses lag, inspect Gateway status and Railway deployment logs.
+
+### 9. Search and star GitHub repositories directly from chat
+
+This feature is bundled into the Docker image. At startup, `entrypoint.sh` installs the skill at `/opt/data/skills/github/github-repo-search-star/` so it remains available even though the Railway Volume can mask files baked into the image. Redeploy the service after these repository changes are merged into your deployed branch.
+
+**Configure the token**
+
+Add this secret variable in **Railway → service → Variables**:
+
+- Name: `GITHUB_TOKEN`
+- Value: a fine-grained Personal Access Token for the GitHub account that should receive the stars.
+
+Use minimum permissions:
+- **User permissions → Starring: Read and write**
+- **Repository permissions → Metadata: Read-only**
+
+Never commit the token or send it through Telegram/Discord. As an alternative, a token may be placed in `/opt/data/.env` with file permissions restricted by `chmod 600 /opt/data/.env`; Railway Variables are recommended.
+
+**Chat commands**
+
+Send an ordinary natural-language request to the Telegram/Discord bot—no repository URL is required:
+
+~~~text
+Find GitHub repositories about AI agents that run on Ubuntu, then star the 5 most relevant repos.
+~~~
+
+Another example:
+
+~~~text
+Find 10 repositories about Hermes Agent skills and star the ones I have not starred yet.
+~~~
+
+If no number is provided, the default is 5 new stars. One request can add at most 20 new stars. The script prioritizes relevance and star count, skips repositories already starred by you, and excludes forks and archived repositories by default. Stars are added to the account that owns `GITHUB_TOKEN`.
+
+**Test search without changing Starred**
+
+After deploying and configuring the token, run this in the Railway terminal:
+
+~~~bash
+python3 "$HERMES_HOME/skills/github/github-repo-search-star/scripts/search_and_star.py" --query "AI agent Ubuntu" --count 5 --dry-run
+~~~
+
+The `--dry-run` option lists candidates without starring them. Remove it only when you intend to add stars. To check whether Hermes discovers the skill:
+
+~~~bash
+hermes skills list | grep -i github-repo-search-star
+~~~
+
+Restart the Gateway service after adding or changing the token so the process receives the latest environment variable.
 
 ## Troubleshooting
 
