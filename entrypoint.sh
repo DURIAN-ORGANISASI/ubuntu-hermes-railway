@@ -123,6 +123,19 @@ elif [[ -e "${PM_STATE_DIR}" ]]; then
 else
   ln -s "${PM_RUNTIME_STATE_DIR}" "${PM_STATE_DIR}"
 fi
+# Sync the bundled GitHub repository search-and-star skill into the persistent Hermes home.
+# Railway mounts /opt/data at runtime, which masks files baked into that path at Docker build.
+BUNDLED_GITHUB_SKILL="/usr/local/share/ubuntu-hermes-railway/skills/github-repo-search-star"
+INSTALLED_GITHUB_SKILL="${HERMES_HOME}/skills/github/github-repo-search-star"
+if [[ -f "${BUNDLED_GITHUB_SKILL}/SKILL.md" && -f "${BUNDLED_GITHUB_SKILL}/scripts/search_and_star.py" ]]; then
+  mkdir -p "${INSTALLED_GITHUB_SKILL}/scripts"
+  install -m 0644 "${BUNDLED_GITHUB_SKILL}/SKILL.md" "${INSTALLED_GITHUB_SKILL}/SKILL.md"
+  install -m 0755 "${BUNDLED_GITHUB_SKILL}/scripts/search_and_star.py" "${INSTALLED_GITHUB_SKILL}/scripts/search_and_star.py"
+  echo "GitHub repository search-and-star skill installed at ${INSTALLED_GITHUB_SKILL}."
+else
+  echo "WARNING: bundled GitHub search-and-star skill was not found in the image." >&2
+fi
+
 cd /data
 
 # Railway containers do not rely on systemd. Keep the Gateway in the container
