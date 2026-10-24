@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# Fastfetch/neofetch-style banner for interactive Bash login shells.
+# Branded, lightweight login banner for the Ubuntu + Hermes Railway terminal.
 [[ $- == *i* ]] || return 0
 [[ -n "${UBUNTU_BANNER_SHOWN:-}" ]] && return 0
 export UBUNTU_BANNER_SHOWN=1
 
-C_ORANGE=$'\033[1;33m'; C_RED=$'\033[1;31m'; C_GREEN=$'\033[1;32m'; C_RESET=$'\033[0m'
+# ANSI true-colour palette: Ubuntu orange, Hermes violet, and calm terminal cyan.
+C_ORANGE=$'\033[38;2;233;84;32m'
+C_VIOLET=$'\033[38;2;157;123;255m'
+C_CYAN=$'\033[38;2;81;205;218m'
+C_GREEN=$'\033[38;2;91;214;145m'
+C_RED=$'\033[38;2;255;107;107m'
+C_WHITE=$'\033[1;97m'
+C_MUTED=$'\033[38;2;128;145;163m'
+C_RESET=$'\033[0m'
+
 . /etc/os-release 2>/dev/null || true
 OS_NAME="${PRETTY_NAME:-Ubuntu}"
 ARCH="$(uname -m 2>/dev/null || echo unknown)"
@@ -13,30 +22,43 @@ UPTIME="$(uptime -p 2>/dev/null | sed 's/^up //' || echo unknown)"
 CPU_COUNT="$(nproc 2>/dev/null || echo unknown)"
 MEM_TOTAL="$(awk '/MemTotal/ {printf "%.1f GiB", $2/1048576}' /proc/meminfo 2>/dev/null)"
 MEM_AVAIL="$(awk '/MemAvailable/ {printf "%.1f GiB", $2/1048576}' /proc/meminfo 2>/dev/null)"
-DISK_INFO="$(df -h /data 2>/dev/null | awk 'NR==2 {printf "%s used / %s (%s)", $3, $2, $5}')"
+DISK_INFO="$(df -h /data 2>/dev/null | awk 'NR==2 {printf "%s / %s (%s)", $3, $2, $5}')"
 TZ_NAME="${TZ:-$(cat /etc/timezone 2>/dev/null || echo UTC)}"
 HOST_NAME="$(hostname 2>/dev/null || echo railway-container)"
 BASH_LABEL="Bash ${BASH_VERSION:-unknown}"
 
-if command -v fastfetch >/dev/null 2>&1; then
-  fastfetch
-else
-  printf '\n%s        .-/+oossssoo+/-..            %s%s%s\n' "$C_ORANGE" "$C_GREEN" "${USER:-root}@${HOST_NAME}" "$C_RESET"
-  printf '%s    `:+ssssssssssssssssss+:`        %sOS:%s       %s\n' "$C_ORANGE" "$C_RED" "$C_RESET" "$OS_NAME"
-  printf '%s  -+ssssssssssssssssssyyssss+-      %sHost:%s     Railway Container\n' "$C_ORANGE" "$C_RED" "$C_RESET"
-  printf '%s .ossssssssssssssssssdMMMNysssso.   %sKernel:%s   %s\n' "$C_ORANGE" "$C_RED" "$C_RESET" "$KERNEL"
-  printf '%s /ssssssssssshdmmNNmmyNMMMMhssssss/  %sArch:%s     %s\n' "$C_ORANGE" "$C_RED" "$C_RESET" "$ARCH"
-  printf '%s+ssssssssshmydMMMMMMMNddddyssssssss+ %sUptime:%s   %s\n' "$C_ORANGE" "$C_RED" "$C_RESET" "${UPTIME:-unknown}"
-  printf '%s/sssssssshNMMMyhhyyyyhmNMMMNhsssssss/ %sShell:%s    %s\n' "$C_ORANGE" "$C_RED" "$C_RESET" "$BASH_LABEL"
-  printf '%s.ssssssssdMMMNhsssssssssshNMMMdsssssss.%sCPU:%s      %s vCPU(s) detected\n' "$C_ORANGE" "$C_RED" "$C_RESET" "$CPU_COUNT"
-  printf '%s +sssshhhyNMMNyssssssssssssyNMMMyssss+ %sMemory:%s   %s available / %s total\n' "$C_ORANGE" "$C_RED" "$C_RESET" "${MEM_AVAIL:-unknown}" "${MEM_TOTAL:-unknown}"
-  printf '%s  ossyNMMMNyMMhsssssssssssssshmmmhssss/ %sDisk:%s     %s\n' "$C_ORANGE" "$C_RED" "$C_RESET" "${DISK_INFO:-unknown}"
-  printf '%s   +ssssssssssshNMMMyssssssssssss+   %sTimezone:%s %s\n' "$C_ORANGE" "$C_RED" "$C_RESET" "$TZ_NAME"
-  printf '%s    `:+ssssssssssssssssss+:`         %sDistro:%s   Ubuntu + Hermes Agent\n' "$C_ORANGE" "$C_RED" "$C_RESET"
-fi
+printf '\n'
+printf '%s╭──────────────────────────────────────────────────────────────────────────────╮%s\n' "$C_MUTED" "$C_RESET"
+printf '%s│%s  %s☿%s  %sHERMES AGENT%s                         %s● ◉ ●%s  %sUBUNTU 26.04%s          %s│%s\n' \
+  "$C_MUTED" "$C_RESET" "$C_VIOLET" "$C_RESET" "$C_WHITE" "$C_RESET" "$C_ORANGE" "$C_RESET" "$C_WHITE" "$C_RESET" "$C_MUTED" "$C_RESET"
+printf '%s│%s     %sAI AGENT RUNTIME%s  %s·%s  %sBROWSER TERMINAL%s  %s·%s  %sRAILWAY%s         %s│%s\n' \
+  "$C_MUTED" "$C_RESET" "$C_VIOLET" "$C_RESET" "$C_MUTED" "$C_RESET" "$C_CYAN" "$C_RESET" "$C_MUTED" "$C_RESET" "$C_ORANGE" "$C_RESET" "$C_MUTED" "$C_RESET"
+printf '%s├──────────────────────────────────────────────────────────────────────────────┤%s\n' "$C_MUTED" "$C_RESET"
 
+printf '%s│%s  %s%-8s%s %-25.25s   %s%-8s%s %-26.26s    %s│%s\n' \
+  "$C_MUTED" "$C_RESET" "$C_CYAN" "HOST" "$C_RESET" "${USER:-root}@${HOST_NAME}" \
+  "$C_CYAN" "KERNEL" "$C_RESET" "$KERNEL" "$C_MUTED" "$C_RESET"
+printf '%s│%s  %s%-8s%s %-25.25s   %s%-8s%s %-26.26s    %s│%s\n' \
+  "$C_MUTED" "$C_RESET" "$C_CYAN" "SHELL" "$C_RESET" "$BASH_LABEL" \
+  "$C_CYAN" "ARCH" "$C_RESET" "$ARCH" "$C_MUTED" "$C_RESET"
+printf '%s│%s  %s%-8s%s %-25.25s   %s%-8s%s %-26.26s    %s│%s\n' \
+  "$C_MUTED" "$C_RESET" "$C_CYAN" "UPTIME" "$C_RESET" "${UPTIME:-unknown}" \
+  "$C_CYAN" "CPU" "$C_RESET" "${CPU_COUNT} vCPU(s)" "$C_MUTED" "$C_RESET"
+printf '%s│%s  %s%-8s%s %-25.25s   %s%-8s%s %-26.26s    %s│%s\n' \
+  "$C_MUTED" "$C_RESET" "$C_CYAN" "MEMORY" "$C_RESET" "${MEM_AVAIL:-unknown} free / ${MEM_TOTAL:-unknown}" \
+  "$C_CYAN" "DISK" "$C_RESET" "${DISK_INFO:-unknown}" "$C_MUTED" "$C_RESET"
+printf '%s│%s  %s%-8s%s %-25.25s   %s%-8s%s %-26.26s    %s│%s\n' \
+  "$C_MUTED" "$C_RESET" "$C_CYAN" "TIMEZONE" "$C_RESET" "$TZ_NAME" \
+  "$C_CYAN" "OS" "$C_RESET" "$OS_NAME" "$C_MUTED" "$C_RESET"
+
+printf '%s├──────────────────────────────────────────────────────────────────────────────┤%s\n' "$C_MUTED" "$C_RESET"
 if pgrep -af '[h]ermes gateway run' >/dev/null 2>&1; then
-  printf '%sHermes Gateway:%s %srunning%s\n\n' "$C_RED" "$C_RESET" "$C_GREEN" "$C_RESET"
+  printf '%s│%s  %s●%s  %sHERMES GATEWAY%s  %sRUNNING%s                                      %s│%s\n' \
+    "$C_MUTED" "$C_RESET" "$C_GREEN" "$C_RESET" "$C_WHITE" "$C_RESET" "$C_GREEN" "$C_RESET" "$C_MUTED" "$C_RESET"
 else
-  printf '%sHermes Gateway:%s %snot running / setup needed%s\n\n' "$C_RED" "$C_RESET" "$C_ORANGE" "$C_RESET"
+  printf '%s│%s  %s○%s  %sHERMES GATEWAY%s  %sNOT RUNNING · SETUP MAY BE NEEDED%s          %s│%s\n' \
+    "$C_MUTED" "$C_RESET" "$C_ORANGE" "$C_RESET" "$C_WHITE" "$C_RESET" "$C_ORANGE" "$C_RESET" "$C_MUTED" "$C_RESET"
 fi
+printf '%s╰──────────────────────────────────────────────────────────────────────────────╯%s\n' "$C_MUTED" "$C_RESET"
+printf '  %sTip:%s run %shermes --help%s to explore the CLI, or %shermes setup%s to configure it.\n\n' \
+  "$C_MUTED" "$C_RESET" "$C_VIOLET" "$C_RESET" "$C_VIOLET" "$C_RESET"
