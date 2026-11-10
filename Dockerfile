@@ -62,8 +62,8 @@ RUN --mount=type=cache,target=/tmp/uv-cache,sharing=locked \
     hermes --version; \
     hermes pm install --extra messaging --extra telegram --extra discord; \
     hermes pm doctor; \
-    if command -v uv >/dev/null 2>&1 && [[ "$(command -v uv)" != "/usr/local/bin/uv" ]]; then install -m 0755 "$(command -v uv)" /usr/local/bin/uv; fi; \
-    if command -v uvx >/dev/null 2>&1 && [[ "$(command -v uvx)" != "/usr/local/bin/uvx" ]]; then install -m 0755 "$(command -v uvx)" /usr/local/bin/uvx; fi; \
+    if command -v uv >/dev/null 2>&1 && [ "$(command -v uv)" != "/usr/local/bin/uv" ]; then install -m 0755 "$(command -v uv)" /usr/local/bin/uv; fi; \
+    if command -v uvx >/dev/null 2>&1 && [ "$(command -v uvx)" != "/usr/local/bin/uvx" ]; then install -m 0755 "$(command -v uvx)" /usr/local/bin/uvx; fi; \
     rm -f /tmp/install-hermes.sh
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
