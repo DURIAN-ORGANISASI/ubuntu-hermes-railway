@@ -38,7 +38,7 @@ RUN set -eux; \
       arm64) TTYD_ASSET="ttyd.aarch64" ;; \
       *) echo "Unsupported architecture: ${TARGETARCH}"; exit 1 ;; \
     esac; \
-    curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/${TTYD_ASSET}" -o /usr/local/bin/ttyd; \
+    curl --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 120 -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/${TTYD_ASSET}" -o /usr/local/bin/ttyd; \
     chmod 0755 /usr/local/bin/ttyd; \
     /usr/local/bin/ttyd --version
 
@@ -56,7 +56,7 @@ RUN --mount=type=cache,target=/tmp/uv-cache,sharing=locked \
     ln -s "${HERMES_RUNTIME_DIR}/cache/uv" "${HERMES_HOME}/cache/uv"; \
     ln -s "${HERMES_RUNTIME_DIR}/cache/partials" "${HERMES_HOME}/cache/partials"; \
     ln -s "${HERMES_RUNTIME_DIR}/tools" "${HERMES_HOME}/tools"; \
-    curl -fsSL "https://raw.githubusercontent.com/NousResearch/hermes-agent/${HERMES_COMMIT}/scripts/install.sh" -o /tmp/install-hermes.sh; \
+    curl --retry 8 --retry-all-errors --retry-delay 3 --retry-max-time 120 -fsSL "https://raw.githubusercontent.com/NousResearch/hermes-agent/${HERMES_COMMIT}/scripts/install.sh" -o /tmp/install-hermes.sh; \
     export PATH="/root/.local/bin:/root/.local/share/uv/bin:${PATH}"; \
     bash /tmp/install-hermes.sh --commit "${HERMES_COMMIT}" --dir /usr/local/share/hermes-agent --hermes-home "${HERMES_HOME}" --non-interactive --skip-browser; \
     hermes --version; \
