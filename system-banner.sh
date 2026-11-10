@@ -106,7 +106,7 @@ print_color_blocks() {
 
 INFO_LABELS=(TITLE RULE OS Host Kernel Uptime Packages Shell Terminal CPU Memory Storage Runtime Hermes Colors)
 INFO_VALUES=(
-  "${USER:-root}@${HOST_NAME}"
+  "${USER:-hermes}@${HOST_NAME}"
   ""
   "${NAME:-Ubuntu} ${VERSION_ID:-} ${ARCH}"
   "Railway container"

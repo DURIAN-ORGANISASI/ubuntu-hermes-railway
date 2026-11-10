@@ -1,4 +1,4 @@
-name: Docker build and terminal smoke test
+name: Docker build, runtime validation, and security scan
 
 on:
   push:
@@ -10,71 +10,118 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-smoke:
+  build-and-smoke-test:
+    name: Build and test (${{ matrix.platform }})
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    env:
+      TERMINAL_USER: railway-ci-test
+      TERMINAL_PASSWORD: ci-only-smoke-test-Password-2026
+      IMAGE_TAG: ubuntu-hermes-railway-ci:${{ github.sha }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v7
 
-      - name: Check shell syntax
+      - name: Check shell and Python syntax
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
           bash -n entrypoint.sh
           bash -n start-hermes
           bash -n system-banner.sh
+          python3 -m py_compile service-supervisor.py skills/github-repo-search-star/scripts/search_and_star.py
 
-      - name: Build container
-        run: docker build --pull --tag hermes-railway-smoke-test .
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4.4.0
 
-      - name: Start terminal and verify authentication
-        env:
-          TEST_TERMINAL_USER: ci_tester
-          TEST_TERMINAL_PASSWORD: ci-only-Password-42-not-a-real-secret
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Build the Railway Hermes image
+        run: docker buildx build --pull --platform "${{ matrix.platform }}" --load --tag "$IMAGE_TAG" .
+
+      - name: Verify Hermes CLI, terminal authentication, non-root user, and persistent paths
+        shell: bash
         run: |
-          set -euo pipefail
-          cleanup() {
-            docker rm --force hermes-railway-smoke-test >/dev/null 2>&1 || true
-          }
+          set -Eeuo pipefail
+          container_name="ubuntu-hermes-railway-smoke"
+          cleanup() { docker rm -f "$container_name" >/dev/null 2>&1 || true; }
           trap cleanup EXIT
 
           docker run --detach \
-            --name hermes-railway-smoke-test \
-            --publish 127.0.0.1:18080:8080 \
-            --env TERMINAL_USER="$TEST_TERMINAL_USER" \
-            --env TERMINAL_PASSWORD="$TEST_TERMINAL_PASSWORD" \
+            --name "$container_name" \
+            --publish 127.0.0.1::8080 \
+            --env TERMINAL_USER \
+            --env TERMINAL_PASSWORD \
+            --env PORT=8080 \
             --env HERMES_AUTOSTART=false \
-            hermes-railway-smoke-test
+            "$IMAGE_TAG" >/dev/null
 
-          authorized_code=""
-          for attempt in $(seq 1 45); do
-            authorized_code="$(curl --silent --show-error \
-              --output /tmp/ttyd-authorized.html \
-              --write-out '%{http_code}' \
-              --user "$TEST_TERMINAL_USER:$TEST_TERMINAL_PASSWORD" \
-              http://127.0.0.1:18080/ || true)"
-            if [ "$authorized_code" = "200" ]; then
+          host_port="$(docker port "$container_name" 8080/tcp | sed 's/.*://')"
+          ready=0
+          for attempt in $(seq 1 60); do
+            status="$(curl --silent --output /tmp/ttyd-authorized.html --write-out '%{http_code}' \
+              --user "${TERMINAL_USER}:${TERMINAL_PASSWORD}" \
+              "http://127.0.0.1:${host_port}/" 2>/dev/null || true)"
+            if [[ "$status" == "200" ]]; then
+              ready=1
               break
             fi
             sleep 2
           done
 
-          if [ "$authorized_code" != "200" ]; then
-            echo "FAIL: authenticated terminal did not return HTTP 200 (last status: $authorized_code)."
-            exit 1
-          fi
-          grep -qi "ttyd" /tmp/ttyd-authorized.html
-
-          unauthorized_code="$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/ || true)"
-          if [ "$unauthorized_code" != "401" ]; then
-            echo "FAIL: terminal must reject unauthenticated requests (received HTTP $unauthorized_code)."
+          if [[ "$ready" != "1" ]] || [[ ! -s /tmp/ttyd-authorized.html ]] || ! grep -qi "ttyd" /tmp/ttyd-authorized.html; then
+            echo "ERROR: authenticated terminal smoke test failed."
+            docker logs "$container_name" 2>&1 || true
             exit 1
           fi
 
-          if docker logs hermes-railway-smoke-test 2>&1 | grep -F -- "$TEST_TERMINAL_PASSWORD"; then
-            echo "FAIL: terminal password appeared in container logs."
+          unauthorized_code="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            "http://127.0.0.1:${host_port}/" 2>/dev/null || true)"
+          if [[ "$unauthorized_code" != "401" ]]; then
+            echo "ERROR: unauthenticated request was not rejected (HTTP $unauthorized_code)."
             exit 1
           fi
 
-          echo "PASS: image built, terminal served HTTP 200 with credentials, unauthenticated requests were rejected, and the password was not logged."
+          process_uid="$(docker exec "$container_name" awk '/^Uid:/ {print $2}' /proc/1/status)"
+          if [[ "$process_uid" != "10001" ]]; then
+            echo "ERROR: service supervisor is running with UID $process_uid, expected 10001."
+            exit 1
+          fi
+
+          docker exec --user 10001:10001 "$container_name" sh -ec '
+            hermes --version >/dev/null
+            test -w /opt/data
+            test -w /usr/local/share/hermes-tools
+            touch /opt/data/.ci-write-test /data/.ci-write-test
+            rm -f /opt/data/.ci-write-test /data/.ci-write-test
+          '
+
+          logs="$(docker logs "$container_name" 2>&1 || true)"
+          credential_b64="$(printf '%s' "${TERMINAL_USER}:${TERMINAL_PASSWORD}" | base64 -w0)"
+          if grep -Fq "$TERMINAL_PASSWORD" <<<"$logs" || grep -Fq "$credential_b64" <<<"$logs"; then
+            echo "ERROR: terminal logs appear to contain a credential or its Base64 encoding."
+            exit 1
+          fi
+
+          echo "PASS: ${{ matrix.platform }} image; Hermes CLI works, authentication is enforced, services run as UID 10001, persistent paths are writable, and logs omit credentials."
+
+      - name: Scan image for HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_TAG }}
+          format: table
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"

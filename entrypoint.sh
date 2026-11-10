@@ -17,40 +17,53 @@ PORT="${PORT:-8080}"
 HERMES_HOME="${HERMES_HOME:-/opt/data}"
 HERMES_RUNTIME_DIR="${HERMES_RUNTIME_DIR:-/usr/local/share/hermes-tools}"
 UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
+export TZ="${TZ:-Asia/Jakarta}"
+export HOME=/home/hermes
+export USER=hermes
+export LOGNAME=hermes
 export HERMES_HOME HERMES_RUNTIME_DIR UV_CACHE_DIR
 
-# Rebuildable tool state must stay outside the persistent Hermes data volume.
-if [[ "${HERMES_RUNTIME_DIR}" == "${HERMES_HOME}" || "${HERMES_RUNTIME_DIR}" == "${HERMES_HOME}/"* || "${HERMES_HOME}" == "${HERMES_RUNTIME_DIR}/"* ]]; then
-  echo "ERROR: HERMES_HOME and HERMES_RUNTIME_DIR must be separate, non-overlapping paths." >&2
+if [[ "${HERMES_HOME}" != "/opt/data" ]]; then
+  echo "ERROR: HERMES_HOME must be /opt/data (mount the Railway Volume there)." >&2
+  exit 1
+fi
+if [[ "${HERMES_RUNTIME_DIR}" != "/usr/local/share/hermes-tools" ]]; then
+  echo "ERROR: HERMES_RUNTIME_DIR must be /usr/local/share/hermes-tools." >&2
+  exit 1
+fi
+if [[ "${UV_CACHE_DIR}" != "/tmp/uv-cache" ]]; then
+  echo "ERROR: UV_CACHE_DIR must be /tmp/uv-cache." >&2
   exit 1
 fi
 if [[ ! "${PORT}" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
   echo "ERROR: PORT must be a TCP port number from 1 to 65535." >&2
   exit 1
 fi
-mkdir -p "${HERMES_HOME}" "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}" /data
+if [[ -L "${HERMES_HOME}" || -L "${HERMES_RUNTIME_DIR}" ]]; then
+  echo "ERROR: Hermes data/runtime root must not be a symlink." >&2
+  exit 1
+fi
 
-# Keep large, re-downloadable Hermes tool payloads and partial downloads off
-# Railway's small persistent volume. Config, sessions, logs and memory stay in
-# HERMES_HOME; only the tool store and download cache are redirected.
+mkdir -p "${HERMES_HOME}" "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}" /data /home/hermes
+
 relocate_rebuildable_dir() {
   local persistent="$1"
   local runtime="$2"
+  local current_target
   mkdir -p "$(dirname "${persistent}")" "$(dirname "${runtime}")"
 
   if [[ -L "${persistent}" ]]; then
-    if [[ "$(readlink "${persistent}")" == "${runtime}" ]]; then
+    current_target="$(readlink "${persistent}")"
+    if [[ "${current_target}" == "${runtime}" ]]; then
       mkdir -p "${runtime}"
       return 0
     fi
-    echo "ERROR: ${persistent} is a symlink to an unexpected location: $(readlink "${persistent}")" >&2
+    echo "ERROR: ${persistent} is a symlink to an unexpected location: ${current_target}" >&2
     return 1
   fi
 
   if [[ -d "${persistent}" ]]; then
     mkdir -p "${runtime}"
-    # Copy to the container filesystem first, then remove the volume copy.
-    # This works across Railway's separate volume/container filesystems.
     cp -a "${persistent}/." "${runtime}/" || {
       echo "ERROR: Could not migrate ${persistent} to ${runtime}; original data was kept." >&2
       return 1
@@ -69,44 +82,45 @@ relocate_rebuildable_dir() {
 relocate_rebuildable_dir "${HERMES_HOME}/cache/partials" "${HERMES_RUNTIME_DIR}/cache/partials"
 relocate_rebuildable_dir "${HERMES_HOME}/tools" "${HERMES_RUNTIME_DIR}/tools"
 
-# Hermes PM's uv cache is hard-coded under HERMES_HOME/cache/uv in this
-# upstream build; UV_CACHE_DIR alone does not relocate it. Move this disposable
-# cache off Railway's small volume and link it to the container filesystem.
 UV_PM_CACHE_DIR="${HERMES_HOME}/cache/uv"
 UV_RUNTIME_CACHE_DIR="${HERMES_RUNTIME_DIR}/cache/uv"
 mkdir -p "${HERMES_HOME}/cache" "${HERMES_RUNTIME_DIR}/cache"
 if [[ -L "${UV_PM_CACHE_DIR}" ]]; then
-  rm -f "${UV_PM_CACHE_DIR}"
-elif [[ -d "${UV_PM_CACHE_DIR}" ]]; then
-  if [[ -d "${UV_RUNTIME_CACHE_DIR}" ]]; then
-    cp -a "${UV_PM_CACHE_DIR}/." "${UV_RUNTIME_CACHE_DIR}/" 2>/dev/null || true
-    rm -rf "${UV_PM_CACHE_DIR}"
-  else
-    mv "${UV_PM_CACHE_DIR}" "${UV_RUNTIME_CACHE_DIR}" 2>/dev/null || {
-      # uv cache is reproducible; discard only this cache if migration fails.
-      rm -rf "${UV_PM_CACHE_DIR}"
-      mkdir -p "${UV_RUNTIME_CACHE_DIR}"
-    }
+  current_target="$(readlink "${UV_PM_CACHE_DIR}")"
+  if [[ "${current_target}" != "${UV_RUNTIME_CACHE_DIR}" ]]; then
+    echo "ERROR: ${UV_PM_CACHE_DIR} points to an unexpected location: ${current_target}" >&2
+    exit 1
   fi
+elif [[ -d "${UV_PM_CACHE_DIR}" ]]; then
+  mkdir -p "${UV_RUNTIME_CACHE_DIR}"
+  cp -a "${UV_PM_CACHE_DIR}/." "${UV_RUNTIME_CACHE_DIR}/" || {
+    echo "ERROR: Could not migrate Hermes uv cache; original data was kept." >&2
+    exit 1
+  }
+  rm -rf "${UV_PM_CACHE_DIR}"
 elif [[ -e "${UV_PM_CACHE_DIR}" ]]; then
-  rm -f "${UV_PM_CACHE_DIR}"
+  echo "ERROR: ${UV_PM_CACHE_DIR} exists but is not a directory." >&2
+  exit 1
+else
+  mkdir -p "${UV_RUNTIME_CACHE_DIR}"
 fi
-mkdir -p "${UV_RUNTIME_CACHE_DIR}"
-ln -s "${UV_RUNTIME_CACHE_DIR}" "${UV_PM_CACHE_DIR}"
+if [[ ! -L "${UV_PM_CACHE_DIR}" ]]; then
+  ln -s "${UV_RUNTIME_CACHE_DIR}" "${UV_PM_CACHE_DIR}"
+fi
 
-# Hermes PM stores its per-install runtime under HERMES_HOME/installs by default.
-# Railway's persistent /opt/data volume is small, so move that PM-only state to
-# the container filesystem and symlink it back. User config, sessions and memory
-# remain under HERMES_HOME; only reinstallable package-manager state is redirected.
 PM_STATE_DIR="${HERMES_HOME}/installs"
 PM_RUNTIME_STATE_DIR="${HERMES_RUNTIME_DIR}/installs"
-mkdir -p "${HERMES_RUNTIME_DIR}"
 if [[ -L "${PM_STATE_DIR}" ]]; then
+  current_target="$(readlink "${PM_STATE_DIR}")"
+  if [[ "${current_target}" != "${PM_RUNTIME_STATE_DIR}" ]]; then
+    echo "ERROR: ${PM_STATE_DIR} points to an unexpected location: ${current_target}" >&2
+    exit 1
+  fi
   mkdir -p "${PM_RUNTIME_STATE_DIR}"
 elif [[ -d "${PM_STATE_DIR}" ]]; then
   if [[ -e "${PM_RUNTIME_STATE_DIR}" ]]; then
     cp -a "${PM_STATE_DIR}/." "${PM_RUNTIME_STATE_DIR}/" || {
-      echo "ERROR: Could not migrate Hermes PM state out of ${PM_STATE_DIR}." >&2
+      echo "ERROR: Could not migrate Hermes PM state out of ${PM_STATE_DIR}; original data was kept." >&2
       exit 1
     }
     rm -rf "${PM_STATE_DIR}"
@@ -121,10 +135,10 @@ elif [[ -e "${PM_STATE_DIR}" ]]; then
   echo "ERROR: ${PM_STATE_DIR} exists but is not a directory or symlink." >&2
   exit 1
 else
+  mkdir -p "${PM_RUNTIME_STATE_DIR}"
   ln -s "${PM_RUNTIME_STATE_DIR}" "${PM_STATE_DIR}"
 fi
-# Sync the bundled GitHub repository search-and-star skill into the persistent Hermes home.
-# Railway mounts /opt/data at runtime, which masks files baked into that path at Docker build.
+
 BUNDLED_GITHUB_SKILL="/usr/local/share/ubuntu-hermes-railway/skills/github-repo-search-star"
 INSTALLED_GITHUB_SKILL="${HERMES_HOME}/skills/github/github-repo-search-star"
 if [[ -f "${BUNDLED_GITHUB_SKILL}/SKILL.md" && -f "${BUNDLED_GITHUB_SKILL}/scripts/search_and_star.py" ]]; then
@@ -136,26 +150,14 @@ else
   echo "WARNING: bundled GitHub search-and-star skill was not found in the image." >&2
 fi
 
-cd /data
+# One-time ownership migration for existing root-owned Railway Volume data.
+# --no-dereference prevents traversing symlinks inside the user data tree.
+chown -R --no-dereference hermes:hermes "${HERMES_HOME}" "${HERMES_RUNTIME_DIR}" "${UV_CACHE_DIR}" /data /home/hermes
+chmod 0700 "${HERMES_HOME}" /home/hermes "${UV_CACHE_DIR}"
+chmod 0770 /data
+chmod 0750 "${HERMES_RUNTIME_DIR}"
 
-# Railway containers do not rely on systemd. Keep the Gateway in the container
-# foreground lifecycle via this restart loop only after the user has configured it.
-if [[ "${HERMES_AUTOSTART:-true}" == "true" || "${HERMES_AUTOSTART:-true}" == "1" ]]; then
-  if [[ -f "${HERMES_HOME}/config.yaml" ]]; then
-    (
-      echo "Hermes config found; starting Gateway supervisor."
-      while true; do
-        echo "Starting Hermes Gateway..."
-        hermes gateway run || true
-        echo "Hermes Gateway exited; retrying in 15 seconds."
-        sleep 15
-      done
-    ) &
-  else
-    echo "Hermes is installed, but setup has not created ${HERMES_HOME}/config.yaml yet."
-    echo "Open the terminal, run 'hermes setup' and 'hermes gateway setup', then restart the service."
-  fi
-fi
+echo "Starting Ubuntu + Hermes terminal as non-root UID 10001 on port ${PORT}."
+echo "Hermes data remains in ${HERMES_HOME}; rebuildable tools remain outside the Railway Volume."
 
-echo "Starting authenticated Ubuntu + Hermes terminal on port ${PORT}."
-exec /usr/local/bin/ttyd --check-origin --port "${PORT}" --credential "${TERMINAL_USER}:${TERMINAL_PASSWORD}" --writable --cwd /data bash --login
+exec /usr/bin/setpriv --reuid=hermes --regid=hermes --init-groups /usr/bin/python3 /usr/local/bin/service-supervisor.py
