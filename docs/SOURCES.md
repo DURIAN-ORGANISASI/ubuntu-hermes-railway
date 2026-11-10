@@ -9,7 +9,9 @@ Dokumen ini mencatat referensi teknis serta batas cakupan lisensi untuk **Ubuntu
 - [Hermes Agent — Telegram](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram): pengaturan Telegram.
 - [Hermes Agent — Discord](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord): pengaturan Discord.
 - [Hermes Agent — Environment variables](https://hermes-agent.nousresearch.com/docs/reference/environment-variables): referensi variabel runtime.
-- [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent): repository upstream Hermes Agent.
+- [Hermes Agent v0.23.1 release](https://github.com/NousResearch/hermes-agent/releases/tag/v0.23.1): pinned stable release; image installs commit `3b421578588243f920886e6fe79a6faa87ea026e`.
+- [Pinned Hermes installer](https://github.com/NousResearch/hermes-agent/blob/3b421578588243f920886e6fe79a6faa87ea026e/scripts/install.sh): installer source matching the pinned release.
+- [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent): upstream Hermes Agent repository.
 - [ttyd](https://github.com/tsl0922/ttyd): terminal berbasis web dan versi binary yang digunakan image.
 - [Ubuntu Docker Official Image](https://hub.docker.com/_/ubuntu): image dasar Ubuntu.
 - [Docker documentation](https://docs.docker.com/): build dan eksekusi container.
@@ -26,3 +28,7 @@ Dokumen ini mencatat referensi teknis serta batas cakupan lisensi untuk **Ubuntu
 ## Cakupan lisensi
 
 File [LICENSE](../LICENSE) menerapkan MIT pada materi proyek yang tercakup di repository ini. Lisensi tersebut tidak otomatis mengganti lisensi Hermes Agent, dependensi, Ubuntu, ttyd, atau komponen upstream lainnya. Periksa lisensi dan persyaratan tiap komponen sebelum memodifikasi, menggunakan ulang, atau mendistribusikan image.
+
+- [Trivy Action](https://github.com/aquasecurity/trivy-action): Docker image vulnerability reporting in GitHub Actions.
+- [Dependabot version updates](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates): weekly Docker and GitHub Actions update checks.
+- [Docker Buildx](https://github.com/docker/buildx) and [QEMU setup](https://github.com/docker/setup-qemu-action): cross-platform image builds and runtime smoke tests.
